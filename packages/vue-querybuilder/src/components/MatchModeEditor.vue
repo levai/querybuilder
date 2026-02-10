@@ -1,63 +1,60 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { lc, parseNumber } from '@react-querybuilder/core';
-import type { MatchMode, MatchModeOptions } from '@react-querybuilder/core';
-import ValueSelector from './ValueSelector.vue';
-import ValueEditor from './ValueEditor.vue';
+import type { Path, FullField } from '@react-querybuilder/core';
+import { lc } from '@react-querybuilder/core';
+import { useMatchModeEditor } from '../composables/useMatchModeEditor';
+import type { MatchModeEditorProps } from '../types';
 
-const props = defineProps<{
-  match: { mode: MatchMode; threshold?: number };
-  options: MatchModeOptions;
-  title?: string;
-  className?: string;
-  disabled?: boolean;
-  testID?: string;
-}>();
+const props = defineProps<MatchModeEditorProps>();
 
-const emit = defineEmits<{
-  (e: 'update:match', match: { mode: MatchMode; threshold?: number }): void;
-}>();
+const {
+  selectorComponent: SelectorComponent = props.schema.controls.valueSelector,
+  numericEditorComponent: NumericEditorComponent = props.schema.controls.valueEditor,
+} = props;
 
-const requiresThreshold = (mm?: string | null) =>
+const { thresholdNum, thresholdRule, thresholdSchema, handleChangeMode, handleChangeThreshold } =
+  useMatchModeEditor(props);
+
+const dummyPath: Path = [];
+const dummyFieldData: FullField = { name: '', value: '', label: '' };
+
+const requiresThreshold = (mm?: string | null): boolean =>
   ['atleast', 'atmost', 'exactly'].includes(lc(mm) ?? '');
-
-const thresholdNum = computed(() =>
-  typeof props.match.threshold === 'number' ? Math.max(0, props.match.threshold) : 1
-);
-
-const handleChangeMode = (value: string | string[]) => {
-  const mode = (Array.isArray(value) ? value[0] : value) as MatchMode;
-  if (requiresThreshold(mode) && typeof props.match.threshold !== 'number') {
-    emit('update:match', { ...props.match, mode, threshold: 1 });
-  } else {
-    emit('update:match', { ...props.match, mode });
-  }
-};
-
-const handleChangeThreshold = (value: string | number | boolean | (string | null)[]) => {
-  const threshold = typeof value === 'number' ? value : parseNumber(value as string, { parseNumbers: true });
-  emit('update:match', { ...props.match, threshold });
-};
 </script>
 
 <template>
-  <div :class="className">
-    <ValueSelector
-      :model-value="match.mode"
-      :options="options"
-      :title="title"
-      :disabled="disabled"
-      :testID="testID"
-      @update:model-value="handleChangeMode"
-    />
-    <ValueEditor
-      v-if="requiresThreshold(match.mode)"
-      :model-value="thresholdNum"
-      value-editor-type="text"
-      input-type="number"
-      :disabled="disabled"
-      :testID="testID"
-      @update:model-value="handleChangeThreshold"
-    />
-  </div>
+  <component
+    :is="SelectorComponent"
+    :schema="props.schema"
+    :test-id="props.testID"
+    :class="props.className"
+    :title="props.title"
+    :handle-on-change="handleChangeMode"
+    :disabled="props.disabled"
+    :value="props.match.mode"
+    :options="props.options"
+    :multiple="false"
+    :lists-as-arrays="false"
+    :path="dummyPath"
+    :level="0"
+  />
+  <component
+    v-if="requiresThreshold(props.match.mode) && NumericEditorComponent"
+    :is="NumericEditorComponent"
+    skip-hook
+    :test-id="props.testID"
+    input-type="number"
+    :title="props.title"
+    :class="props.className"
+    :disabled="props.disabled"
+    :handle-on-change="handleChangeThreshold"
+    field=""
+    operator=""
+    :value="thresholdNum"
+    value-source="value"
+    :field-data="dummyFieldData"
+    :schema="thresholdSchema"
+    :path="dummyPath"
+    :level="0"
+    :rule="thresholdRule"
+  />
 </template>

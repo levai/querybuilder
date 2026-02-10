@@ -1,25 +1,21 @@
 <script setup lang="ts">
-import type { RuleGroupTypeAny, RuleType, Path } from '@react-querybuilder/core';
+import type { DragHandleProps } from '../types';
 
-const props = defineProps<{
-  ruleOrGroup: RuleType | RuleGroupTypeAny;
-  path: Path;
-  disabled?: boolean;
-  enableDragAndDrop?: boolean;
-  title?: string;
-  label?: string;
-  className?: string;
-  testID?: string;
-}>();
+const props = defineProps<DragHandleProps>();
+
+// Vue 3 template refs are handled via template ref attribute
+// For drag handle, we'll expose the ref via defineExpose if needed
+defineExpose({
+  // The parent component can access this via template ref
+});
 </script>
 
 <template>
   <span
-    v-if="enableDragAndDrop && !disabled"
-    :class="['drag-handle', className]"
-    :title="title ?? 'Drag to reorder'"
-    :data-testid="testID"
+    :data-testid="props.testID"
+    :class="props.className"
+    :title="props.title"
   >
-    {{ label ?? '⋮⋮' }}
+    {{ props.label }}
   </span>
 </template>

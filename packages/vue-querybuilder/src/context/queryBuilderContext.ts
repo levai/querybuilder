@@ -1,7 +1,20 @@
-import type { ComputedRef, InjectionKey } from 'vue';
-import type { QueryBuilderContextValue } from '../types';
+import type { FullField, RuleGroupTypeAny } from '@react-querybuilder/core';
+import type { InjectionKey, Ref } from 'vue';
+import type { QueryBuilderContextProps, Schema } from '../types';
 
-/** provide 的是 computed ref，子组件 inject 后 unref 使用 */
-export const QUERY_BUILDER_CONTEXT_KEY: InjectionKey<
-  ComputedRef<QueryBuilderContextValue>
-> = Symbol('QueryBuilderContext');
+export interface QueryBuilderContextType<
+  F extends FullField = FullField,
+  O extends string = string,
+> extends QueryBuilderContextProps<F, O> {
+  initialQuery?: RuleGroupTypeAny;
+  qbId?: string;
+  schema?: Ref<Schema<F, O>>;
+}
+
+/**
+ * Injection key for QueryBuilder context.
+ * Used with provide/inject to pass context to child components.
+ */
+export const QUERY_BUILDER_CONTEXT_KEY: InjectionKey<Ref<QueryBuilderContextType>> = Symbol(
+  'QueryBuilderContext'
+) as InjectionKey<Ref<QueryBuilderContextType>>;

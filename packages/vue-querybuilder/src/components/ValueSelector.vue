@@ -1,49 +1,61 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="Opt extends FullOption = FullOption">
+import { computed } from 'vue';
+import { toArray } from '@react-querybuilder/core';
 import type { FullOption } from '@react-querybuilder/core';
+import type { ValueSelectorProps } from '../types';
+import { useValueSelector } from '../composables/useValueSelector';
+import { useSelectElementChangeHandler } from '../composables/useSelectElementChangeHandler';
+import { toOptions } from '../utils';
 
-const props = defineProps<{
-  modelValue: string | string[];
-  options: FullOption[];
-  multiple?: boolean;
-  listsAsArrays?: boolean;
-  title?: string;
-  disabled?: boolean;
-  className?: string;
-  testID?: string;
-}>();
+const props = defineProps<ValueSelectorProps<Opt>>();
 
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: string | string[]): void;
-}>();
+const { onChange } = useValueSelector(props);
 
-function handleChange(event: Event) {
-  const el = event.target as HTMLSelectElement;
-  if (props.multiple) {
-    const selected = Array.from(el.selectedOptions).map(opt => opt.value);
-    emit('update:modelValue', props.listsAsArrays ? selected : selected.join(','));
-  } else {
-    emit('update:modelValue', el.value);
-  }
-}
+const val = computed(() => (props.multiple ? toArray(props.value) : props.value));
+
+const selectElementChangeHandler = useSelectElementChangeHandler({
+  multiple: props.multiple,
+  onChange,
+});
+
+const options = computed(() => toOptions(props.options));
+const optgroups = computed(() => options.value?.filter(o => o.type === 'optgroup') ?? []);
+const flatOptions = computed(() => options.value?.filter(o => o.type === 'option') ?? []);
 </script>
 
 <template>
   <select
-    :value="multiple ? undefined : (typeof modelValue === 'string' ? modelValue : modelValue?.[0])"
-    :multiple="multiple"
-    :title="title"
-    :disabled="disabled"
-    :class="className"
-    :data-testid="testID"
-    @change="handleChange"
+    :data-testid="props.testID"
+    :class="props.className"
+    :value="val"
+    :title="props.title"
+    :disabled="props.disabled"
+    :multiple="!!props.multiple"
+    @change="selectElementChangeHandler"
   >
-    <option
-      v-for="option in options"
-      :key="option.value"
-      :value="option.value"
-      :selected="Array.isArray(modelValue) && modelValue.includes(option.value)"
-    >
-      {{ option.label }}
-    </option>
+    <template v-if="options">
+      <optgroup
+        v-for="(og, ogIndex) in optgroups"
+        :key="ogIndex"
+        :label="og.label"
+      >
+        <option
+          v-for="(opt, optIndex) in og.options"
+          :key="optIndex"
+          :value="opt.value"
+          :disabled="opt.disabled"
+        >
+          {{ opt.label }}
+        </option>
+      </optgroup>
+      <option
+        v-for="(opt, optIndex) in flatOptions"
+        :key="optIndex"
+        :value="opt.value"
+        :disabled="opt.disabled"
+      >
+        {{ opt.label }}
+      </option>
+    </template>
   </select>
 </template>

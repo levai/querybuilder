@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { type ComputedRef, type Ref, computed, defineAsyncComponent, inject, reactive } from 'vue';
-import { useRuleGroup, type UseRuleGroup, type UseRuleGroupProps } from '../composables/useRuleGroup';
+import { computed, inject } from 'vue';
+import { useRuleGroup, type UseRuleGroupProps } from '../composables/useRuleGroup';
 import { useDeprecatedProps } from '../composables/useDeprecatedProps';
 import { isRuleGroup, pathsAreEqual } from '@react-querybuilder/core';
 import type { RuleGroupTypeAny, RuleType } from '@react-querybuilder/core';
+import type { Schema } from '../types';
 import ShiftActions from './ShiftActions.vue';
 import DragHandle from './DragHandle.vue';
 import CombinatorSelector from './CombinatorSelector.vue';
@@ -12,37 +13,127 @@ import ActionElement from './ActionElement.vue';
 import InlineCombinator from './InlineCombinator.vue';
 import { QUERY_BUILDER_CONTEXT_KEY } from '../context/queryBuilderContext';
 import { useRuleGroupDnD } from '../composables/useRuleGroupDnD';
-
-type UnwrapRefs<T> = { [K in keyof T]: T[K] extends Ref<infer V> ? V : T[K] extends ComputedRef<infer V> ? V : T[K] };
-
-const RuleGroupRecursive = defineAsyncComponent(() => import('./RuleGroup.vue'));
-const Rule = defineAsyncComponent(() => import('./Rule.vue'));
+import RuleGroupRecursive from './RuleGroup.vue';
+import Rule from './Rule.vue';
 
 const props = defineProps<Omit<UseRuleGroupProps, 'schema'>>();
 
+// Debug: log props
+if (import.meta.env.DEV) {
+  console.log('RuleGroup component mounted', {
+    hasProps: !!props,
+    hasRuleGroup: !!props.ruleGroup,
+    ruleGroupId: props.ruleGroup?.id,
+    ruleGroupRules: props.ruleGroup?.rules?.length ?? 0,
+    path: props.path,
+    hasTranslations: !!props.translations,
+    hasActions: !!props.actions,
+  });
+}
+
 const schemaRef = inject(QUERY_BUILDER_CONTEXT_KEY);
 if (!schemaRef) {
+  console.error('RuleGroup: schemaRef not found from inject');
   throw new Error('RuleGroup must be used within QueryBuilder');
 }
 
+// Extract schema from context
+// schemaRef is Ref<QueryBuilderContextType>, and contextValue.schema should be Ref<Schema>
+// But Vue may auto-unwrap nested refs, so we need to check if it's already unwrapped
+const schema = computed(() => {
+  const contextValue = schemaRef.value;
+  if (import.meta.env.DEV) {
+    console.log('RuleGroup: contextValue', {
+      hasContextValue: !!contextValue,
+      contextValueKeys: contextValue ? Object.keys(contextValue) : [],
+      hasSchema: !!contextValue?.schema,
+      schemaType: typeof contextValue?.schema,
+      schemaIsRef: contextValue?.schema && typeof contextValue.schema === 'object' && 'value' in contextValue.schema,
+      schemaValueDirect: (contextValue?.schema as any)?.value,
+      schemaDirect: contextValue?.schema,
+    });
+  }
+  if (!contextValue) {
+    console.error('Context value is undefined', { schemaRef });
+    throw new Error('Context value is undefined');
+  }
+  if (!contextValue.schema) {
+    console.error('Schema not found in QueryBuilder context', {
+      contextValue,
+      contextValueKeys: Object.keys(contextValue),
+      schemaRef: schemaRef.value,
+    });
+    throw new Error('Schema not found in QueryBuilder context');
+  }
+  
+  // Check if schema is already a Ref or if Vue unwrapped it
+  // If it has a 'value' property, it's a Ref, otherwise it's already the Schema object
+  let schemaValue: any;
+  if (contextValue.schema && typeof contextValue.schema === 'object' && 'value' in contextValue.schema) {
+    // It's a Ref<Schema>, access .value
+    schemaValue = (contextValue.schema as any).value;
+  } else {
+    // Vue unwrapped it, it's already the Schema object
+    schemaValue = contextValue.schema;
+  }
+  
+  if (import.meta.env.DEV) {
+    console.log('RuleGroup schema extracted', {
+      hasSchema: !!schemaValue,
+      hasControls: !!schemaValue?.controls,
+      hasRuleGroupControl: !!schemaValue?.controls?.ruleGroup,
+      hasFields: !!schemaValue?.fields,
+      fieldsCount: Array.isArray(schemaValue?.fields) ? schemaValue.fields.length : 0,
+      qbId: schemaValue?.qbId,
+    });
+  }
+  if (!schemaValue) {
+    console.error('Schema value is undefined', {
+      contextValue,
+      schemaRef: schemaRef.value,
+      contextValueSchema: contextValue.schema,
+      schemaValue,
+    });
+    throw new Error('Schema value is undefined');
+  }
+  return schemaValue;
+});
+
 useDeprecatedProps('ruleGroup', !props.ruleGroup);
 
-const rgRef = useRuleGroup({
+// ✅ Vue3 规范：直接调用 useRuleGroup，它内部已经处理了响应式
+const {
+  disabled,
+  muted,
+  combinator,
+  outerClassName,
+  classNames,
+  pathsMemo,
+  accessibleDescription,
+  onCombinatorChange,
+  onNotToggleChange,
+  onIndependentCombinatorChange,
+  addRule: addRuleFn,
+  addGroup: addGroupFn,
+  cloneGroup: cloneGroupFn,
+  toggleLockGroup: toggleLockGroupFn,
+  toggleMuteGroup: toggleMuteGroupFn,
+  removeGroup: removeGroupFn,
+  shiftGroupUp: shiftGroupUpFn,
+  shiftGroupDown: shiftGroupDownFn,
+} = useRuleGroup({
   ...props,
-  schema: schemaRef,
+  schema: schema.value,
 } as UseRuleGroupProps);
-
-/** reactive 包装后，模板中访问属性时 Vue 会自动解包 ref */
-const rg = reactive(rgRef) as UnwrapRefs<UseRuleGroup>;
 
 const dnd = useRuleGroupDnD({
   path: props.path,
   ruleGroup: props.ruleGroup,
-  schema: schemaRef,
-  disabled: rgRef.disabled,
+  schema: schema,
+  disabled: disabled ?? false,
 });
 
-// 阻止事件冒泡的辅助函数
+// ✅ Vue3 规范：事件处理函数直接定义，使用 stopPropagation 包装
 const stopPropagation = (fn: (event?: MouseEvent, context?: unknown) => void) => {
   return (event?: MouseEvent, context?: unknown) => {
     event?.stopPropagation();
@@ -50,55 +141,58 @@ const stopPropagation = (fn: (event?: MouseEvent, context?: unknown) => void) =>
   };
 };
 
-const addRule = stopPropagation(rgRef.addRule);
-const addGroup = stopPropagation(rgRef.addGroup);
-const cloneGroup = stopPropagation(rgRef.cloneGroup);
-const toggleLockGroup = stopPropagation(rgRef.toggleLockGroup);
-const toggleMuteGroup = stopPropagation(rgRef.toggleMuteGroup);
-const removeGroup = stopPropagation(rgRef.removeGroup);
-const shiftGroupUp = stopPropagation(rgRef.shiftGroupUp);
-const shiftGroupDown = stopPropagation(rgRef.shiftGroupDown);
+const addRule = stopPropagation(addRuleFn);
+const addGroup = stopPropagation(addGroupFn);
+const cloneGroup = stopPropagation(cloneGroupFn);
+const toggleLockGroup = stopPropagation(toggleLockGroupFn);
+const toggleMuteGroup = stopPropagation(toggleMuteGroupFn);
+const removeGroup = stopPropagation(removeGroupFn);
+const shiftGroupUp = stopPropagation(shiftGroupUpFn);
+const shiftGroupDown = stopPropagation(shiftGroupDownFn);
 
 const shiftTitles = computed(() => {
-  const schema = schemaRef!.value;
-  return schema.showShiftActions
+  const s = schema.value;
+  return s.showShiftActions
     ? {
-        up: schema.translations.shiftActionUp?.title,
-        down: schema.translations.shiftActionDown?.title,
+        shiftUp: props.translations.shiftActionUp?.title,
+        shiftDown: props.translations.shiftActionDown?.title,
       }
     : undefined;
 });
 
 const shiftLabels = computed(() => {
-  const schema = schemaRef!.value;
-  return schema.showShiftActions
+  const s = schema.value;
+  return s.showShiftActions
     ? {
-        up: schema.translations.shiftActionUp?.label,
-        down: schema.translations.shiftActionDown?.label,
+        shiftUp: props.translations.shiftActionUp?.label,
+        shiftDown: props.translations.shiftActionDown?.label,
       }
     : undefined;
 });
 
 </script>
 
-<template>
-  <div
+<template  >
+    <div
     :ref="dnd.dropRef"
-    :title="rg.accessibleDescription"
-    :class="[rg.outerClassName, dnd.isOver && 'query-builder-drag-over', dnd.dropNotAllowed && 'query-builder-drag-over-not-allowed']"
+    :title="accessibleDescription"
+    :class="[outerClassName, dnd.isOver && 'query-builder-drag-over', dnd.dropNotAllowed && 'query-builder-drag-over-not-allowed']"
     data-testid="rule-group"
-    :data-not="rg.ruleGroup.not ? 'true' : undefined"
+    :data-not="props.ruleGroup?.not ? 'true' : undefined"
     :data-rule-group-id="props.id"
     :data-level="props.path.length"
     :data-path="JSON.stringify(props.path)"
   >
     <!-- Header -->
-    <div :class="rg.classNames.header">
+    <div :class="classNames.header">
       <!-- ShiftActions -->
       <ShiftActions
-        v-if="schemaRef.showShiftActions && props.path.length > 0"
+        v-if="schema.showShiftActions && props.path.length > 0"
+        :rule-or-group="props.ruleGroup"
         :path="props.path"
-        :disabled="rg.disabled"
+        :level="props.path.length"
+        :schema="schema"
+        :disabled="disabled"
         :labels="shiftLabels"
         :titles="shiftTitles"
         :shift-up-disabled="props.shiftUpDisabled"
@@ -109,173 +203,227 @@ const shiftLabels = computed(() => {
 
       <!-- DragHandle (@vue-dnd-kit: dragRef 必须始终绑定到 DOM，否则 mounted 报 ElementRef is not set) -->
       <span
-        v-show="props.path.length > 0 && schemaRef.enableDragAndDrop"
+        v-show="props.path.length > 0 && schema.enableDragAndDrop"
         :ref="dnd.dragRef"
         @pointerdown="dnd.handleDragStart"
       >
         <DragHandle
-          v-if="props.path.length > 0 && schemaRef.enableDragAndDrop"
-          :rule-or-group="rg.ruleGroup"
+          v-if="props.path.length > 0 && schema.enableDragAndDrop"
+          :rule-or-group="props.ruleGroup"
           :path="props.path"
-          :disabled="rg.disabled"
-          :title="schemaRef.translations.dragHandle?.title"
-          :label="schemaRef.translations.dragHandle?.label"
+          :level="props.path.length"
+          :schema="schema"
+          :disabled="disabled"
+          :title="props.translations.dragHandle?.title"
+          :label="props.translations.dragHandle?.label"
         />
       </span>
 
       <!-- CombinatorSelector -->
       <CombinatorSelector
-        v-if="!schemaRef.showCombinatorsBetweenRules && !schemaRef.independentCombinators"
-        :model-value="rg.combinator"
-        :options="schemaRef.combinators"
-        :title="schemaRef.translations.combinators?.title"
-        :disabled="rg.disabled"
-        @update:model-value="rg.onCombinatorChange"
+        v-if="!schema.showCombinatorsBetweenRules && !schema.independentCombinators"
+        :value="combinator"
+        :options="schema.combinators"
+        :rules="props.ruleGroup?.rules ?? []"
+        :rule-group="props.ruleGroup"
+        :path="props.path"
+        :level="props.path.length"
+        :schema="schema"
+        :title="props.translations.combinators?.title"
+        :disabled="disabled"
+        :handle-on-change="onCombinatorChange"
       />
 
       <!-- NotToggle -->
       <NotToggle
-        v-if="schemaRef.showNotToggle"
-        :model-value="!!rg.ruleGroup.not"
-        :label="schemaRef.translations.notToggle?.label"
-        :title="schemaRef.translations.notToggle?.title"
-        :disabled="rg.disabled"
-        @update:model-value="rg.onNotToggleChange"
+        v-if="schema.showNotToggle"
+        :checked="!!props.ruleGroup?.not"
+        :rule-group="props.ruleGroup"
+        :path="props.path"
+        :level="props.path.length"
+        :schema="schema"
+        :label="props.translations.notToggle?.label"
+        :title="props.translations.notToggle?.title"
+        :disabled="disabled"
+        :handle-on-change="onNotToggleChange"
       />
 
       <!-- AddRuleAction -->
       <ActionElement
-        :label="schemaRef.translations.addRule?.label"
-        :title="schemaRef.translations.addRule?.title"
-        :disabled="rg.disabled"
-        :action-class="rg.classNames.addRule"
-        @click="addRule"
+        :rule-or-group="props.ruleGroup"
+        :path="props.path"
+        :level="props.path.length"
+        :schema="schema"
+        :label="props.translations.addRule?.label"
+        :title="props.translations.addRule?.title"
+        :disabled="disabled"
+        :action-class="classNames.addRule"
+        :handle-on-click="addRule"
       />
 
       <!-- AddGroupAction -->
       <ActionElement
-        v-if="schemaRef.maxLevels && schemaRef.maxLevels > props.path.length"
-        :label="schemaRef.translations.addGroup?.label"
-        :title="schemaRef.translations.addGroup?.title"
-        :disabled="rg.disabled"
-        :action-class="rg.classNames.addGroup"
-        @click="addGroup"
+        v-if="schema.maxLevels && schema.maxLevels > props.path.length"
+        :rule-or-group="props.ruleGroup"
+        :path="props.path"
+        :level="props.path.length"
+        :schema="schema"
+        :label="props.translations.addGroup?.label"
+        :title="props.translations.addGroup?.title"
+        :disabled="disabled"
+        :action-class="classNames.addGroup"
+        :handle-on-click="addGroup"
       />
 
       <!-- CloneGroupAction -->
       <ActionElement
-        v-if="schemaRef.showCloneButtons && props.path.length > 0"
-        :label="schemaRef.translations.cloneRuleGroup?.label"
-        :title="schemaRef.translations.cloneRuleGroup?.title"
-        :disabled="rg.disabled"
-        :action-class="rg.classNames.cloneGroup"
-        @click="cloneGroup"
+        v-if="schema.showCloneButtons && props.path.length > 0"
+        :rule-or-group="props.ruleGroup"
+        :path="props.path"
+        :level="props.path.length"
+        :schema="schema"
+        :label="props.translations.cloneRuleGroup?.label"
+        :title="props.translations.cloneRuleGroup?.title"
+        :disabled="disabled"
+        :action-class="classNames.cloneGroup"
+        :handle-on-click="cloneGroup"
       />
 
       <!-- LockGroupAction -->
       <ActionElement
-        v-if="schemaRef.showLockButtons"
+        v-if="schema.showLockButtons"
+        :rule-or-group="props.ruleGroup"
+        :path="props.path"
+        :level="props.path.length"
+        :schema="schema"
         :label="
-          rg.disabled
-            ? schemaRef.translations.lockGroupDisabled?.label
-            : schemaRef.translations.lockGroup?.label
+          disabled
+            ? props.translations.lockGroupDisabled?.label
+            : props.translations.lockGroup?.label
         "
         :title="
-          rg.disabled
-            ? schemaRef.translations.lockGroupDisabled?.title
-            : schemaRef.translations.lockGroup?.title
+          disabled
+            ? props.translations.lockGroupDisabled?.title
+            : props.translations.lockGroup?.title
         "
-        :disabled="rg.disabled"
-        :action-class="rg.classNames.lockGroup"
-        @click="toggleLockGroup"
+        :disabled="disabled"
+        :action-class="classNames.lockGroup"
+        :handle-on-click="toggleLockGroup"
       />
 
       <!-- MuteGroupAction -->
       <ActionElement
-        v-if="schemaRef.showMuteButtons"
+        v-if="schema.showMuteButtons"
+        :rule-or-group="props.ruleGroup"
+        :path="props.path"
+        :level="props.path.length"
+        :schema="schema"
         :label="
-          rg.ruleGroup.muted
-            ? schemaRef.translations.unmuteGroup?.label
-            : schemaRef.translations.muteGroup?.label
+          props.ruleGroup?.muted
+            ? props.translations.unmuteGroup?.label
+            : props.translations.muteGroup?.label
         "
         :title="
-          rg.ruleGroup.muted
-            ? schemaRef.translations.unmuteGroup?.title
-            : schemaRef.translations.muteGroup?.title
+          props.ruleGroup?.muted
+            ? props.translations.unmuteGroup?.title
+            : props.translations.muteGroup?.title
         "
-        :disabled="rg.disabled"
-        :action-class="rg.classNames.muteGroup"
-        @click="toggleMuteGroup"
+        :disabled="disabled"
+        :action-class="classNames.muteGroup"
+        :handle-on-click="toggleMuteGroup"
       />
 
       <!-- RemoveGroupAction -->
       <ActionElement
         v-if="props.path.length > 0"
-        :label="schemaRef.translations.removeGroup?.label"
-        :title="schemaRef.translations.removeGroup?.title"
-        :disabled="rg.disabled"
-        :action-class="rg.classNames.removeGroup"
-        @click="removeGroup"
+        :rule-or-group="props.ruleGroup"
+        :path="props.path"
+        :level="props.path.length"
+        :schema="schema"
+        :label="props.translations.removeGroup?.label"
+        :title="props.translations.removeGroup?.title"
+        :disabled="disabled"
+        :action-class="classNames.removeGroup"
+        :handle-on-click="removeGroup"
       />
     </div>
 
-    <!-- Body -->
-    <div :class="rg.classNames.body">
+    <div :class="classNames.body">
+      <!-- ✅ 与 React 版本对齐：使用 pathsMemo 计算的 path 作为 key -->
       <template
-        v-for="(r, idx) in rg.ruleGroup.rules"
-        :key="typeof r === 'string' ? [...rg.pathsMemo[idx].path, r].join('-') : (r as RuleType | RuleGroupTypeAny).id"
+        v-for="(r, idx) in (props.ruleGroup?.rules ?? [])"
+        :key="typeof r === 'string' ? [...(pathsMemo[idx]?.path ?? [...props.path, idx]), r].join('-') : (r as RuleType | RuleGroupTypeAny).id"
       >
         <!-- InlineCombinator (between rules, when showCombinatorsBetweenRules) -->
         <InlineCombinator
           v-if="
             idx > 0 &&
-            !schemaRef.independentCombinators &&
-            schemaRef.showCombinatorsBetweenRules
+            !schema.independentCombinators &&
+            schema.showCombinatorsBetweenRules
           "
-          :model-value="rg.combinator"
-          :options="schemaRef.combinators"
-          :title="schemaRef.translations.combinators?.title"
-          :disabled="rg.disabled"
-          @update:model-value="rg.onCombinatorChange"
+          :component="schema.controls.combinatorSelector"
+          :model-value="combinator"
+          :options="schema.combinators"
+          :rules="props.ruleGroup?.rules ?? []"
+          :rule-group="props.ruleGroup"
+          :path="props.path"
+          :level="props.path.length"
+          :schema="schema"
+          :title="props.translations.combinators?.title"
+          :disabled="disabled"
+          :handle-on-change="onCombinatorChange"
         />
 
         <!-- Independent Combinator (when independentCombinators mode) -->
+        <!-- ✅ 与 React 版本对齐：使用 pathsMemo 获取 path 和 disabled -->
         <InlineCombinator
           v-if="typeof r === 'string'"
+          :component="schema.controls.combinatorSelector"
           :model-value="r"
-          :options="schemaRef.combinators"
-          :title="schemaRef.translations.combinators?.title"
-          :disabled="rg.pathsMemo[idx].disabled || (typeof r !== 'string' && (r as RuleType | RuleGroupTypeAny).disabled)"
-          @update:model-value="(val) => rg.onIndependentCombinatorChange(val, idx)"
+          :options="schema.combinators"
+          :rules="props.ruleGroup?.rules ?? []"
+          :rule-group="props.ruleGroup"
+          :path="pathsMemo[idx]?.path ?? [...props.path, idx]"
+          :level="(pathsMemo[idx]?.path ?? [...props.path, idx]).length"
+          :schema="schema"
+          :title="props.translations.combinators?.title"
+          :disabled="pathsMemo[idx]?.disabled ?? false"
+          :handle-on-change="(val: string) => onIndependentCombinatorChange(val, idx)"
         />
 
-        <!-- RuleGroup (recursive) -->
-        <component
-          :is="RuleGroupRecursive"
+        <!-- RuleGroup (递归：直接自引用，保证 props 响应) -->
+        <!-- ✅ 与 React 版本对齐：使用 pathsMemo 获取 path 和 disabled -->
+        <RuleGroupRecursive
           v-else-if="isRuleGroup(r)"
           :id="(r as RuleGroupTypeAny).id"
-          :path="rg.pathsMemo[idx].path"
+          :path="pathsMemo[idx]?.path ?? [...props.path, idx]"
           :rule-group="r as RuleGroupTypeAny"
-          :disabled="rg.pathsMemo[idx].disabled || (r as RuleGroupTypeAny).disabled"
-          :parent-disabled="rg.disabled || props.parentDisabled"
-          :parent-muted="rg.muted || props.parentMuted"
-          :shift-up-disabled="pathsAreEqual([0], rg.pathsMemo[idx].path)"
-          :shift-down-disabled="props.path.length === 0 && idx === rg.ruleGroup.rules.length - 1"
+          :translations="props.translations"
+          :schema="schema"
+          :actions="props.actions"
+          :disabled="pathsMemo[idx]?.disabled || (r as RuleGroupTypeAny).disabled"
+          :parent-disabled="props.parentDisabled || disabled"
+          :parent-muted="props.parentMuted || muted"
+          :shift-up-disabled="pathsAreEqual([0], pathsMemo[idx]?.path ?? [])"
+          :shift-down-disabled="props.path.length === 0 && idx === (props.ruleGroup?.rules?.length ?? 0) - 1"
           :context="props.context"
         />
 
         <!-- Rule -->
-        <component
-          :is="Rule"
+        <!-- ✅ 与 React 版本对齐：使用 pathsMemo 获取 path 和 disabled -->
+        <Rule
           v-else
           :id="(r as RuleType).id"
-          :path="rg.pathsMemo[idx].path"
+          :path="pathsMemo[idx]?.path ?? [...props.path, idx]"
           :rule="r as RuleType"
-          :disabled="rg.pathsMemo[idx].disabled || (r as RuleType).disabled"
-          :parent-disabled="rg.disabled || props.parentDisabled"
-          :parent-muted="rg.muted || props.parentMuted"
-          :shift-up-disabled="pathsAreEqual([0], rg.pathsMemo[idx].path)"
-          :shift-down-disabled="props.path.length === 0 && idx === rg.ruleGroup.rules.length - 1"
+          :translations="props.translations"
+          :schema="schema"
+          :actions="props.actions"
+          :disabled="pathsMemo[idx]?.disabled || (r as RuleType).disabled"
+          :parent-disabled="props.parentDisabled || disabled"
+          :parent-muted="props.parentMuted || muted"
+          :shift-up-disabled="pathsAreEqual([0], pathsMemo[idx]?.path ?? [])"
+          :shift-down-disabled="props.path.length === 0 && idx === (props.ruleGroup?.rules?.length ?? 0) - 1"
           :context="props.context"
         />
       </template>

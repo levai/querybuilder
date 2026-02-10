@@ -1,72 +1,33 @@
-import type { DefineComponent } from 'vue';
-import type { QueryBuilderProps } from './types';
-import QueryBuilderRoot from './QueryBuilder.vue';
+// Re-export everything from @react-querybuilder/core
+export * from '@react-querybuilder/core';
 
-/** 根组件，用法与 react-querybuilder 对齐 */
-export const QueryBuilder = QueryBuilderRoot as DefineComponent<QueryBuilderProps>;
-// export { RuleGroup, Rule, ActionElement, ValueSelector, ValueEditor, NotToggle, DragHandle, ShiftActions, InlineCombinator };
+// Export defaults
+export * from './defaults';
 
-export { queryBuilderDefaults } from './defaults';
+// Export components
+export * from './components';
 
-export { usePathsMemo } from './composables/usePathsMemo';
-export type { PathInfo } from './composables/usePathsMemo';
-export { useRuleGroupDnD } from './composables/useRuleGroupDnD';
-export { useRuleDnD } from './composables/useRuleDnD';
-export { useInlineCombinatorDnD } from './composables/useInlineCombinatorDnD';
+// Export composables
+export * from './composables';
 
-export {
-  generateID,
-  prepareRuleGroup,
-  formatQuery,
-  defaultOperators,
-  queryBuilderFlagDefaults,
-  standardClassnames,
-  isRuleGroup,
-  isRuleType,
-  isRuleGroupType,
-  isRuleGroupTypeIC,
-  getValidationClassNames,
-  defaultValidator,
-  defaultPlaceholderFieldName,
-  defaultPlaceholderOperatorName,
-  defaultCombinators,
-  groupInvalidReasons,
-  convertToIC,
-  convertFromIC,
-  toFullOption,
-  toFullOptionList,
-} from '@react-querybuilder/core';
+// Export context
+export * from './context/queryBuilderContext';
 
-export type {
-  QueryBuilderProps,
-  QueryBuilderContextValue,
-  QueryActions,
-  Controls,
-  ResolvedControls,
-  QueryBuilderClassnames,
-  FullField,
-  Path,
-  RuleGroupType,
-  RuleGroupTypeAny,
-  RuleType,
-  FullOperator,
-  FullCombinator,
-  ValueEditorType,
-  InputType,
-  MoveOptions,
-} from './types';
-export type {
-  ValidationResult,
-  ValidationMap,
-  QueryValidator,
-  RuleValidator,
-  ValueSource,
-  ValueSources,
-  ValueSourceFlexibleOptions,
-  ParseNumbersPropConfig,
-  Field,
-  OptionGroup,
-  FullOption,
-  MatchMode,
-  MatchModeOptions,
-} from '@react-querybuilder/core';
+// Export messages
+export * from './messages';
+
+// Export state management
+export * from './state/asyncOptionListsStore';
+export * from './state/queryStore';
+
+// Export types
+export * from './types';
+
+// Export utils
+export * from './utils';
+
+// Export forward exports for parser functions
+export * from './fwd';
+
+// Default export
+export { default } from './components/QueryBuilder.vue';

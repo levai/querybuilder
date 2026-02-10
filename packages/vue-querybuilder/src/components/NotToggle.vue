@@ -1,26 +1,26 @@
 <script setup lang="ts">
-const props = defineProps<{
-  modelValue: boolean;
-  label?: string;
-  title?: string;
-  disabled?: boolean;
-  testID?: string;
-}>();
+import { generateId } from '../utils';
+import type { NotToggleProps } from '../types';
 
-defineEmits<{
-  (e: 'update:modelValue', value: boolean): void;
-}>();
+const props = defineProps<NotToggleProps>();
+
+const id = generateId();
 </script>
 
 <template>
-  <label :title="title">
+  <label
+    :data-testid="props.testID"
+    :class="props.className"
+    :title="props.title"
+    :for="id"
+  >
     <input
+      :id="id"
       type="checkbox"
-      :checked="modelValue"
-      :disabled="disabled"
-      :data-testid="props.testID"
-      @change="$emit('update:modelValue', ($event.target as HTMLInputElement).checked)"
+      :checked="!!props.checked"
+      :disabled="props.disabled"
+      @change="(e) => props.handleOnChange((e.target as HTMLInputElement).checked)"
     />
-    <span v-if="label">{{ label }}</span>
+    {{ props.label }}
   </label>
 </template>

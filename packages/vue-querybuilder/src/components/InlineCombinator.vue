@@ -1,27 +1,38 @@
 <script setup lang="ts">
-import type { FullOption } from '@react-querybuilder/core';
-import CombinatorSelector from './CombinatorSelector.vue';
+import { clsx, standardClassnames, TestID } from '@react-querybuilder/core';
+import type { InlineCombinatorProps } from '../types';
+import { computed } from 'vue';
 
-defineProps<{
-  modelValue: string;
-  options: FullOption[];
-  title?: string;
-  disabled?: boolean;
-  className?: string;
-}>();
+const props = defineProps<InlineCombinatorProps>();
 
-defineEmits<{
-  (e: 'update:modelValue', value: string): void;
-}>();
+const { component: CombinatorSelectorComponent } = props;
+
+const className = computed(() =>
+  clsx(
+    props.schema.suppressStandardClassnames || standardClassnames.betweenRules,
+    props.schema.classNames.betweenRules
+  )
+);
 </script>
 
 <template>
-  <CombinatorSelector
-    :model-value="modelValue"
-    :options="options"
-    :title="title"
-    :disabled="disabled"
-    :class="className"
-    @update:model-value="$emit('update:modelValue', $event)"
-  />
+  <div :class="className" :data-testid="TestID.inlineCombinator">
+    <component
+      :is="CombinatorSelectorComponent"
+      :schema="props.schema"
+      :test-id="TestID.combinators"
+      :class="props.className"
+      :title="props.title"
+      :disabled="props.disabled"
+      :handle-on-change="props.handleOnChange"
+      :value="props.value"
+      :options="props.options"
+      :multiple="props.multiple"
+      :lists-as-arrays="props.listsAsArrays"
+      :path="props.path"
+      :level="props.level"
+      :rules="props.rules"
+      :rule-group="props.ruleGroup"
+    />
+  </div>
 </template>

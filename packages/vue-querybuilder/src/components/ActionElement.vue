@@ -1,28 +1,18 @@
 <script setup lang="ts">
-defineProps<{
-  label?: string;
-  title?: string;
-  disabled?: boolean;
-  /** 与 React 对齐；同时保留 actionClass 以兼容现有用法 */
-  className?: string;
-  actionClass?: string;
-  testID?: string;
-}>();
+import type { ActionProps } from '../types';
 
-const emit = defineEmits<{
-  (e: 'click', event?: MouseEvent, context?: unknown): void;
-}>();
+const props = defineProps<ActionProps>();
 </script>
 
 <template>
   <button
-    :class="[className, actionClass]"
-    :title="title"
-    :disabled="disabled"
-    :data-testid="testID"
     type="button"
-    @click="emit('click', $event)"
+    :data-testid="props.testID"
+    :disabled="props.disabled && !props.disabledTranslation"
+    :class="props.className"
+    :title="props.disabledTranslation && props.disabled ? props.disabledTranslation.title : props.title"
+    @click="(e) => props.handleOnClick(e as MouseEvent)"
   >
-    {{ label }}
+    {{ props.disabledTranslation && props.disabled ? props.disabledTranslation.label : props.label }}
   </button>
 </template>
