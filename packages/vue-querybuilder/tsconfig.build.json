@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {}
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue"],
+  "exclude": ["dev", "**/*.spec.ts", "**/*.spec.vue"]
+}

@@ -1,0 +1,56 @@
+{
+  "name": "vue-querybuilder",
+  "version": "1.0.0-beta.1",
+  "description": "Vue 3 Query Builder component - 1:1 port of react-querybuilder using @react-querybuilder/core",
+  "type": "module",
+  "main": "./dist/vue-querybuilder.cjs",
+  "module": "./dist/vue-querybuilder.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/vue-querybuilder.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/vue-querybuilder.cjs"
+      }
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "dist/styles"],
+  "sideEffects": ["*.css", "*.scss"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/react-querybuilder/react-querybuilder.git",
+    "directory": "packages/vue-querybuilder"
+  },
+  "keywords": ["vue", "vue3", "querybuilder", "query", "builder", "operators", "component", "composition-api"],
+  "license": "MIT",
+  "homepage": "https://react-querybuilder.js.org/",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build && vue-tsc -p tsconfig.build.json && bun run build:css",
+    "build:css": "mkdir -p dist/styles && cp ../core/src/*.scss dist && cp ../core/src/styles/*.scss dist/styles && bun sass --style=compressed --silence-deprecation=if-function dist",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "bunx vitest run"
+  },
+  "dependencies": {
+    "@react-querybuilder/core": "workspace:*",
+    "@vue-dnd-kit/core": "^1.7.0"
+  },
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "sass": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.2.0",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^25.0.0",
+    "vitest": "^2.1.6"
+  }
+}
