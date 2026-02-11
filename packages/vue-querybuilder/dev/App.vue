@@ -77,6 +77,31 @@ function resetToDefaults() {
     (options as Record<string, boolean>)[key] = defaultOptions[key];
   });
 }
+
+function getRulesWithValueTypes() {
+  const result: Array<{ field: string; operator: string; valueType: string; isArray: boolean }> = [];
+  const walk = (rg: RuleGroupTypeAny) => {
+    for (const r of rg.rules) {
+      if (typeof r === 'string') continue;
+      if (isRuleGroup(r)) {
+        walk(r);
+      } else {
+        const rule = r as RuleType;
+        if (rule.field && rule.value !== undefined) {
+          const valueType = Array.isArray(rule.value) ? 'array' : typeof rule.value;
+          result.push({
+            field: rule.field,
+            operator: rule.operator || '',
+            valueType: `${valueType} (${JSON.stringify(rule.value).substring(0, 50)})`,
+            isArray: Array.isArray(rule.value),
+          });
+        }
+      }
+    }
+  };
+  walk(query.value);
+  return result;
+}
 </script>
 
 <template>
@@ -110,6 +135,27 @@ function resetToDefaults() {
       <aside class="query-display">
         <h2>Query</h2>
         <pre>{{ JSON.stringify(query, null, 2) }}</pre>
+        <div v-if="options.listsAsArrays || options.parseNumbers" class="test-hints">
+          <h3>测试提示</h3>
+          <div v-if="options.listsAsArrays" class="test-hint">
+            <strong>Lists as Arrays:</strong> 启用后，多值操作符（between、in、notIn）的值会以数组形式存储。
+            <br />测试：选择 "between" 或 "in" 操作符，查看 value 是否为数组格式。
+          </div>
+          <div v-if="options.parseNumbers" class="test-hint">
+            <strong>Parse Numbers:</strong> 启用后，数字输入会被解析为 number 类型。
+            <br />测试：选择 "Age" 字段，输入数字，查看 value 的类型（应为数字而非字符串）。
+          </div>
+          <div class="test-hint-value-types">
+            <strong>当前规则值类型检查：</strong>
+            <ul>
+              <li v-for="(rule, idx) in getRulesWithValueTypes()" :key="idx">
+                {{ rule.field }} ({{ rule.operator }}): 
+                <code>{{ rule.valueType }}</code>
+                <span v-if="rule.isArray"> - 数组</span>
+              </li>
+            </ul>
+          </div>
+        </div>
       </aside>
     </div>
   </div>
@@ -246,6 +292,64 @@ function resetToDefaults() {
   overflow-y: auto;
   overflow-x: auto;
   font-size: 12px;
+}
+
+.test-hints {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ddd;
+  font-size: 12px;
+}
+
+.test-hints h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #2387c4;
+}
+
+.test-hint {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #fff3cd;
+  border-left: 3px solid #ffc107;
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+.test-hint strong {
+  color: #856404;
+}
+
+.test-hint-value-types {
+  margin-top: 12px;
+  padding: 8px;
+  background: #d1ecf1;
+  border-left: 3px solid #0c5460;
+  border-radius: 4px;
+}
+
+.test-hint-value-types strong {
+  color: #0c5460;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.test-hint-value-types ul {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.test-hint-value-types li {
+  margin-bottom: 4px;
+}
+
+.test-hint-value-types code {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
 }
 
 /* 与 React demo 一致：开启验证时，无效 rule 的 .rule-value 高亮 */
