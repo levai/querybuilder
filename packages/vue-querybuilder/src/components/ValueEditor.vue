@@ -12,6 +12,8 @@ const props = withDefaults(
     operator?: string;
     disabled?: boolean;
     className?: string;
+    /** 双输入（between/notBetween）时每个 input 的类名，与 React 的 valueListItemClassName 一致 */
+    valueListItemClassName?: string;
     title?: string;
     placeholder?: string;
     handleOnChange?: (value: unknown) => void;
@@ -107,6 +109,7 @@ function onSelectChange(v: string | string[]) {
     <template v-if="type === 'text'">
       <input
         :type="inputType ?? 'text'"
+        :class="valueListItemClassName"
         :placeholder="placeholder"
         :value="valueAsArray[0] ?? ''"
         :disabled="disabled"
@@ -115,6 +118,7 @@ function onSelectChange(v: string | string[]) {
       <span v-if="separator != null && typeof separator === 'string'" class="value-separator">{{ separator }}</span>
       <input
         :type="inputType ?? 'text'"
+        :class="valueListItemClassName"
         :placeholder="placeholder"
         :value="valueAsArray[1] ?? ''"
         :disabled="disabled"

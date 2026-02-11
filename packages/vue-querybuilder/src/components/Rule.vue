@@ -226,6 +226,7 @@ function onValueSourceChange(v: string | string[]) {
         :separator="valueEditorSeparatorVal"
         :disabled="disabledVal"
         :class-name="classNamesVal.value"
+        :value-list-item-class-name="classNamesVal.valueListItem"
         :values="valuesVal"
         :multiple="valueEditorTypeVal === 'multiselect'"
         :test-id="TestID.valueEditor"

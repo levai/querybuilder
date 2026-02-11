@@ -160,19 +160,24 @@ export function useRule(options: UseRulePathOptions) {
   const validationClassName = computed(() => getValidationClassNames(validationResult.value));
   const getRuleClassnameFn = computed(() => schemaRef.value?.getRuleClassname ?? (() => ''));
 
-  const classNames = computed(() => ({
-    shiftActions: clsx(standardClassnames.shiftActions, classNamesProp.value?.shiftActions),
-    dragHandle: clsx(standardClassnames.dragHandle, classNamesProp.value?.dragHandle),
-    fields: clsx(suppressStandardClassnames.value || standardClassnames.fields, classNamesProp.value?.fields),
-    matchMode: clsx(suppressStandardClassnames.value || standardClassnames.matchMode, classNamesProp.value?.matchMode),
-    operators: clsx(suppressStandardClassnames.value || standardClassnames.operators, classNamesProp.value?.operators),
-    value: clsx(suppressStandardClassnames.value || standardClassnames.value, classNamesProp.value?.value),
-    valueSource: clsx(suppressStandardClassnames.value || standardClassnames.valueSource, classNamesProp.value?.valueSource),
-    cloneRule: clsx(standardClassnames.cloneRule, classNamesProp.value?.cloneRule),
-    lockRule: clsx(suppressStandardClassnames.value || standardClassnames.lockRule, classNamesProp.value?.lockRule),
-    muteRule: clsx(standardClassnames.muteRule, classNamesProp.value?.muteRule),
-    removeRule: clsx(suppressStandardClassnames.value || standardClassnames.removeRule, classNamesProp.value?.removeRule),
-  }));
+  const classNames = computed(() => {
+    const p = classNamesProp.value ?? {};
+    return {
+      shiftActions: clsx(standardClassnames.shiftActions, p.shiftActions),
+      dragHandle: clsx(standardClassnames.dragHandle, p.dragHandle),
+      fields: clsx(suppressStandardClassnames.value || standardClassnames.fields, p.valueSelector, p.fields),
+      matchMode: clsx(suppressStandardClassnames.value || standardClassnames.matchMode, p.valueSelector, p.matchMode),
+      matchThreshold: clsx(suppressStandardClassnames.value || standardClassnames.matchThreshold, p.valueSelector, p.matchThreshold),
+      operators: clsx(suppressStandardClassnames.value || standardClassnames.operators, p.valueSelector, p.operators),
+      value: clsx(suppressStandardClassnames.value || standardClassnames.value, p.value),
+      valueListItem: clsx(suppressStandardClassnames.value || standardClassnames.valueListItem, p.valueListItem),
+      valueSource: clsx(suppressStandardClassnames.value || standardClassnames.valueSource, p.valueSelector, p.valueSource),
+      cloneRule: clsx(standardClassnames.cloneRule, p.actionElement, p.cloneRule),
+      lockRule: clsx(suppressStandardClassnames.value || standardClassnames.lockRule, p.actionElement, p.lockRule),
+      muteRule: clsx(standardClassnames.muteRule, p.actionElement, p.muteRule),
+      removeRule: clsx(suppressStandardClassnames.value || standardClassnames.removeRule, p.actionElement, p.removeRule),
+    };
+  });
 
   const hasSubQuery = computed(() => (matchModes.value?.length ?? 0) > 0);
   const outerClassName = computed(() =>
