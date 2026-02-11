@@ -1,26 +1,23 @@
 // Re-export everything from @react-querybuilder/core
 export * from '@react-querybuilder/core';
 
-// Export defaults
-export * from './defaults';
+// Export barrel (defaults, messages, types, utils)
+// Note: Vue version does not export hooks (React-specific), use composables instead
+export * from './barrel';
 
 // Export components
 export * from './components';
 
-// Export composables
+// Export composables (Vue equivalent of React hooks)
 export * from './composables';
 
 // Export context
 export * from './context/queryBuilderContext';
 
-// Export messages
-export * from './messages';
-
-// Export types
-export * from './types';
-
-// Export utils
-export * from './utils';
-
 // Default export
-export { default } from './components/QueryBuilder.vue';
+export { QueryBuilder as default } from './components';
+
+// Note: Vue version does not export:
+// - redux (React-specific, Vue uses context instead)
+// - hooks (React-specific, Vue uses composables instead)
+// - QueryBuilderStateProvider (React-specific)
