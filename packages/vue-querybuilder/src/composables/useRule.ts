@@ -81,6 +81,11 @@ export function useRule(options: UseRulePathOptions) {
     return rule.value?.valueSource === 'field' ? 'select' : getVet(rule.value?.field ?? '', rule.value?.operator ?? '', { fieldData: fieldData.value });
   });
   const inputType = computed(() => {
+    const fd = fieldData.value;
+    // 优先使用 fieldData.inputType，与 React 版本一致
+    if (fd && typeof fd === 'object' && 'inputType' in fd && fd.inputType != null) {
+      return fd.inputType as string;
+    }
     const getIt = schemaRef.value?.getInputType ?? (() => 'text');
     return getIt(rule.value?.field ?? '', rule.value?.operator ?? '', { fieldData: fieldData.value });
   });

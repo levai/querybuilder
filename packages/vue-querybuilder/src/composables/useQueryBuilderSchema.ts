@@ -227,7 +227,9 @@ export function useQueryBuilderSchema<
       const newGroup = prepareRuleGroup(createRuleGroup(props.value.independentCombinators) as RuleGroupTypeAny, { idGenerator }) as RG;
       return newGroup;
     }
-    let prepared = (q.id ? q : prepareRuleGroup(q as RuleGroupTypeAny, { idGenerator })) as RG;
+    // 创建深拷贝，确保转换函数操作的是纯对象，避免 Vue 响应式代理的问题
+    const qSnapshot = JSON.parse(JSON.stringify(q)) as RuleGroupTypeAny;
+    let prepared = (qSnapshot.id ? qSnapshot : prepareRuleGroup(qSnapshot, { idGenerator })) as RG;
     // 如果指定了 independentCombinators prop，确保 query 格式匹配
     if (props.value.independentCombinators !== undefined) {
       const isIC = isRuleGroupTypeIC(prepared);
@@ -274,7 +276,9 @@ export function useQueryBuilderSchema<
     if (pathIsDisabled(parentPath, queryLocal) || queryDisabled.value) return;
     const next = props.value.onAddRule?.(rule, parentPath, queryLocal as RG) ?? true;
     const newRule = next === true ? rule : next;
-    const newQuery = add(queryLocal as RuleGroupTypeAny, newRule, parentPath, {
+    // 创建深拷贝，避免 Vue 响应式代理与 Immer 的冲突
+    const querySnapshot = JSON.parse(JSON.stringify(queryLocal)) as RuleGroupTypeAny;
+    const newQuery = add(querySnapshot, newRule, parentPath, {
       combinators: combinators.value,
       idGenerator,
     });
@@ -288,7 +292,9 @@ export function useQueryBuilderSchema<
     if (pathIsDisabled(parentPath, queryLocal) || queryDisabled.value) return;
     const next = props.value.onAddGroup?.(ruleGroup, parentPath, queryLocal) ?? true;
     const newGroup = next === true ? ruleGroup : next;
-    const newQuery = add(queryLocal as RuleGroupTypeAny, newGroup, parentPath, {
+    // 创建深拷贝，避免 Vue 响应式代理与 Immer 的冲突
+    const querySnapshot = JSON.parse(JSON.stringify(queryLocal)) as RuleGroupTypeAny;
+    const newQuery = add(querySnapshot, newGroup, parentPath, {
       combinators: combinators.value,
       idGenerator,
     });
@@ -317,9 +323,11 @@ export function useQueryBuilderSchema<
     const queryLocal = getQuery();
     if (!queryLocal) return;
     if (pathIsDisabled(path, queryLocal) || queryDisabled.value) return;
-    const node = findPath(path, queryLocal as RuleGroupTypeAny);
+    // 创建深拷贝，避免 Vue 响应式代理的问题
+    const querySnapshot = JSON.parse(JSON.stringify(queryLocal)) as RuleGroupTypeAny;
+    const node = findPath(path, querySnapshot);
     if (node && (props.value.onRemove?.(node, path, queryLocal as RG) ?? true)) {
-      dispatchQuery(remove(queryLocal as RuleGroupTypeAny, path));
+      dispatchQuery(remove(querySnapshot, path));
     }
   };
 
@@ -327,7 +335,9 @@ export function useQueryBuilderSchema<
     const queryLocal = getQuery();
     if (!queryLocal) return;
     if (pathIsDisabled(oldPath, queryLocal) || queryDisabled.value) return;
-    const nextQuery = move(queryLocal as RuleGroupTypeAny, oldPath, newPath, {
+    // 创建深拷贝，避免 Vue 响应式代理的问题
+    const querySnapshot = JSON.parse(JSON.stringify(queryLocal)) as RuleGroupTypeAny;
+    const nextQuery = move(querySnapshot, oldPath, newPath, {
       clone,
       combinators: combinators.value,
       idGenerator,
@@ -349,13 +359,15 @@ export function useQueryBuilderSchema<
     independentCombinatorsProp,
     (newVal, oldVal) => {
       if (newVal !== undefined && newVal !== oldVal && queryRef.value) {
-        const currentIsIC = isRuleGroupTypeIC(queryRef.value);
+        // 创建深拷贝，确保转换函数操作的是纯对象，避免 Vue 响应式代理的问题
+        const querySnapshot = JSON.parse(JSON.stringify(queryRef.value)) as RuleGroupTypeAny;
+        const currentIsIC = isRuleGroupTypeIC(querySnapshot);
         if (newVal && !currentIsIC) {
           // 需要转换为 IC 格式
-          dispatchQuery(convertToIC(queryRef.value));
+          dispatchQuery(convertToIC(querySnapshot));
         } else if (!newVal && currentIsIC) {
           // 需要转换为普通格式
-          dispatchQuery(convertFromIC(queryRef.value));
+          dispatchQuery(convertFromIC(querySnapshot));
         }
       }
     },

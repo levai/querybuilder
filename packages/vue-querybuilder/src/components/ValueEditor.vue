@@ -49,7 +49,17 @@ const displayValue = computed(() => {
   if (v === undefined || v === null) return '';
   if (typeof v === 'boolean') return v;
   if (Array.isArray(v)) return v[0] ?? '';
+  // bigint 类型需要转换为字符串
+  if (typeof v === 'bigint') return `${v}`;
   return String(v);
+});
+
+// 与 React 版本的 inputTypeCoerced 逻辑一致
+const inputTypeCoerced = computed(() => {
+  if (props.inputType === 'bigint' || props.operator === 'in' || props.operator === 'notIn') {
+    return 'text';
+  }
+  return props.inputType ?? 'text';
 });
 
 const isBetween = computed(() => {
@@ -97,6 +107,20 @@ function multiValueHandler(val: unknown, idx: number) {
   props.handleOnChange?.(props.listsAsArrays ? arr : joinWith(arr, ','));
 }
 
+function bigIntValueHandler(val: unknown) {
+  const valAsMaybeNumber = props.parseNumbers && typeof val === 'string' ? Number(val) : val;
+  let bi: bigint;
+  try {
+    // BigInt 可以接受 string | number | bigint | boolean
+    const valForBigInt = valAsMaybeNumber as string | number | bigint | boolean;
+    bi = BigInt(valForBigInt);
+  } catch {
+    props.handleOnChange?.(valAsMaybeNumber);
+    return;
+  }
+  props.handleOnChange?.(bi);
+}
+
 function onInputChange(e: Event) {
   const t = (e?.target as HTMLInputElement);
   if (props.type === 'checkbox') {
@@ -104,6 +128,11 @@ function onInputChange(e: Event) {
     return;
   }
   const raw = t?.value ?? '';
+  // bigint 类型的特殊处理
+  if (props.inputType === 'bigint') {
+    bigIntValueHandler(raw);
+    return;
+  }
   if (props.parseNumbers && (props.inputType === 'number' || props.inputType === 'range')) {
     const n = Number(raw);
     const out = raw === '' ? null : (Number.isNaN(n) ? raw : n);
@@ -128,7 +157,7 @@ function onSelectChange(v: string | string[]) {
   >
     <template v-if="type === 'text'">
       <input
-        :type="inputType ?? 'text'"
+        :type="inputTypeCoerced"
         :class="valueListItemClassName"
         :placeholder="placeholder"
         :value="valueAsArray[0] ?? ''"
@@ -137,7 +166,7 @@ function onSelectChange(v: string | string[]) {
       />
       <span v-if="separator != null && typeof separator === 'string'" class="value-separator">{{ separator }}</span>
       <input
-        :type="inputType ?? 'text'"
+        :type="inputTypeCoerced"
         :class="valueListItemClassName"
         :placeholder="placeholder"
         :value="valueAsArray[1] ?? ''"
@@ -218,10 +247,22 @@ function onSelectChange(v: string | string[]) {
     :data-testid="testId"
     @input="(e: Event) => handleOnChange?.((e.target as HTMLTextAreaElement)?.value)"
   />
+  <!-- bigint 类型的特殊处理 -->
+  <input
+    v-else-if="inputType === 'bigint'"
+    :type="inputTypeCoerced"
+    :placeholder="placeholder"
+    :value="displayValue"
+    :title="title"
+    :class="className"
+    :disabled="disabled"
+    :data-testid="testId"
+    @input="onInputChange"
+  />
   <!-- 默认 text 输入 -->
   <input
     v-else
-    :type="inputType ?? 'text'"
+    :type="inputTypeCoerced"
     :placeholder="placeholder"
     :value="displayValue"
     :title="title"

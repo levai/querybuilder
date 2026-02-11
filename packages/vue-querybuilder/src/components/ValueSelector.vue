@@ -17,34 +17,41 @@ const props = defineProps<{
   testId?: string;
 }>();
 
-const selectValue = computed(() =>
-  props.multiple ? (Array.isArray(props.value) ? props.value : props.value != null ? [props.value] : []) : (Array.isArray(props.value) ? props.value[0] : props.value ?? '')
-);
+// 使用 computed 实现 v-model 的双向绑定
+const modelValue = computed({
+  get() {
+    if (props.multiple) {
+      // multiselect 模式下返回数组
+      return Array.isArray(props.value) ? props.value : props.value != null ? [props.value] : [];
+    }
+    // 单选模式下返回字符串
+    return Array.isArray(props.value) ? props.value[0] : props.value ?? '';
+  },
+  set(newValue: string | string[]) {
+    if (props.multiple) {
+      // multiselect 模式下，newValue 应该是数组
+      const valueArray = Array.isArray(newValue) ? newValue : [newValue];
+      props.handleOnChange?.(valueArray);
+    } else {
+      // 单选模式下，newValue 应该是字符串
+      props.handleOnChange?.(Array.isArray(newValue) ? newValue[0] : newValue);
+    }
+  },
+});
 
 function optValue(o: { value?: string; name?: string }): string {
   return o?.value ?? o?.name ?? '';
-}
-
-function onChange(e: Event) {
-  const t = e?.target as HTMLSelectElement;
-  if (props.multiple) {
-    const selected = Array.from(t.selectedOptions).map((el) => el.value);
-    props.handleOnChange?.(selected);
-  } else {
-    props.handleOnChange?.(t?.value ?? '');
-  }
 }
 </script>
 
 <template>
   <select
-    :value="multiple ? undefined : (Array.isArray(selectValue) ? selectValue[0] : selectValue)"
+    v-model="modelValue"
     :title="title"
     :class="className"
     :disabled="disabled"
     :multiple="multiple"
     :data-testid="testId"
-    @change="onChange"
   >
     <template v-for="(opt, i) in (options ?? [])" :key="i">
       <optgroup v-if="opt && typeof opt === 'object' && 'options' in opt" :label="(opt as OptGroup).label">
@@ -52,7 +59,6 @@ function onChange(e: Event) {
           v-for="o in ((opt as OptGroup).options ?? [])"
           :key="optValue(o)"
           :value="optValue(o)"
-          :selected="multiple && Array.isArray(selectValue) && selectValue.includes(optValue(o))"
           :disabled="o.disabled"
         >
           {{ o.label }}
@@ -61,7 +67,6 @@ function onChange(e: Event) {
       <option
         v-else-if="opt && typeof opt === 'object' && ('name' in opt || 'value' in opt)"
         :value="optValue(opt as FlatOpt)"
-        :selected="multiple && Array.isArray(selectValue) && selectValue.includes(optValue(opt as FlatOpt))"
         :disabled="(opt as FlatOpt).disabled"
       >
         {{ (opt as FlatOpt).label }}
