@@ -281,10 +281,13 @@ export function useQueryBuilderSchema<
   };
 
   const onPropChange = (prop: UpdateableProperties, value: unknown, path: Path) => {
-    const queryLocal = getQuery();
+    // 先获取 query 的快照，避免在 update 执行过程中访问到 draft
+    const queryLocal = queryRef.value;
     if (!queryLocal) return;
     if ((pathIsDisabled(path, queryLocal) && prop !== 'disabled') || queryDisabled.value) return;
-    const newQuery = update(queryLocal as RuleGroupTypeAny, prop, value, path, {
+    // 创建 query 的深拷贝，避免在 update 执行过程中访问 draft 状态
+    const querySnapshot = JSON.parse(JSON.stringify(queryLocal)) as RuleGroupTypeAny;
+    const newQuery = update(querySnapshot, prop, value, path, {
       resetOnFieldChange: props.value.resetOnFieldChange ?? true,
       resetOnOperatorChange: props.value.resetOnOperatorChange ?? false,
       getRuleDefaultOperator,
