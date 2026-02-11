@@ -19,6 +19,10 @@ const base = getCommonViteConfig({
 
 export default defineConfig({
   ...base,
+  server: {
+    ...base.server,
+    host: '127.0.0.1', // 避免 getaddrinfo ENOTFOUND localhost（部分环境无法解析 localhost）
+  },
   build: {
     ...base.build,
     rollupOptions: {

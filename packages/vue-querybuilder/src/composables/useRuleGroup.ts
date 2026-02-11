@@ -1,353 +1,185 @@
-import type {
-  ActionElementEventHandler,
-  Classnames,
-  Path,
-  RuleGroupType,
-  RuleGroupTypeAny,
-  RuleGroupTypeIC,
-  ValidationResult,
-  ValueChangeEventHandler,
-} from '@react-querybuilder/core';
+/**
+ * RuleGroup composable — inject queryRef + path, compute ruleGroup via findPath.
+ */
+// @ts-nocheck - context schema ref typing
 import {
   clsx,
+  findPath,
   getFirstOption,
   getOption,
-  getParentPath,
-  getValidationClassNames,
+  isRuleGroup,
   isRuleGroupType,
-  pathsAreEqual,
   standardClassnames,
 } from '@react-querybuilder/core';
-import { computed, type ComputedRef } from 'vue';
-import { useDeprecatedProps } from './useDeprecatedProps';
-import { useReactDndWarning } from './useReactDndWarning';
-import type { RuleGroupProps } from '../types';
+import type { Path, RuleGroupTypeAny } from '@react-querybuilder/core';
+import { computed, inject } from 'vue';
+import { QUERY_REF_KEY, DISPATCH_KEY, QUERY_BUILDER_CONTEXT_KEY } from '../context/queryBuilderContext';
+import { usePathsMemo } from './usePathsMemo';
+import type { RuleGroupProps, Schema } from '../types';
+import { getValidationClassNames } from '@react-querybuilder/core';
 
-/* oxlint-disable typescript/no-explicit-any */
-export interface UseRuleGroup extends RuleGroupProps {
-  addGroup: ActionElementEventHandler;
-  addRule: ActionElementEventHandler;
-  accessibleDescription: string;
-  muted?: boolean;
-  classNames: Pick<
-    { [k in keyof Classnames]: string },
-    | 'header'
-    | 'shiftActions'
-    | 'dragHandle'
-    | 'combinators'
-    | 'notToggle'
-    | 'addRule'
-    | 'addGroup'
-    | 'cloneGroup'
-    | 'lockGroup'
-    | 'muteGroup'
-    | 'removeGroup'
-    | 'body'
-  >;
-  cloneGroup: ActionElementEventHandler;
-  onCombinatorChange: ValueChangeEventHandler;
-  onGroupAdd: (group: RuleGroupTypeAny, parentPath: Path, context?: any) => void;
-  onIndependentCombinatorChange: (value: any, index: number, context?: any) => void;
-  onNotToggleChange: (checked: boolean, context?: any) => void;
-  outerClassName: string;
-  pathsMemo: ComputedRef<{ path: Path; disabled: boolean }[]>;
-  removeGroup: ActionElementEventHandler;
-  ruleGroup: RuleGroupType | RuleGroupTypeIC;
-  shiftGroupDown: (event?: MouseEvent, context?: any) => void;
-  shiftGroupUp: (event?: MouseEvent, context?: any) => void;
-  toggleLockGroup: ActionElementEventHandler;
-  toggleMuteGroup: ActionElementEventHandler;
-  validationClassName: string;
-  validationResult: boolean | ValidationResult;
+export interface UseRuleGroupPathOptions {
+  path: Path;
+  disabled?: boolean;
+  parentDisabled?: boolean;
+  parentMuted?: boolean;
+  shiftUpDisabled?: boolean;
+  shiftDownDisabled?: boolean;
+  context?: unknown;
 }
-/* oxlint-enable typescript/no-explicit-any */
 
-export interface UseRuleGroupProps extends RuleGroupProps {}
+export function useRuleGroup(options: UseRuleGroupPathOptions) {
+  const queryRef = inject(QUERY_REF_KEY);
+  const dispatch = inject(DISPATCH_KEY);
+  const contextRef = inject(QUERY_BUILDER_CONTEXT_KEY);
+  if (!queryRef || !dispatch || !contextRef) throw new Error('RuleGroup must be used within QueryBuilder');
 
-/**
- * Prepares all values and methods used by the {@link RuleGroup} component.
- *
- * @group Composables
- */
-export const useRuleGroup = (props: UseRuleGroupProps): UseRuleGroup => {
-  const {
-    id,
-    path,
-    ruleGroup: ruleGroupProp,
-    schema: {
-      qbId,
-      accessibleDescriptionGenerator,
-      classNames: classNamesProp,
-      combinators,
-      createRule,
-      createRuleGroup,
-      disabledPaths,
-      independentCombinators,
-      validationMap,
-      enableDragAndDrop,
-      getRuleGroupClassname,
-      suppressStandardClassnames,
-    },
-    actions: { onGroupAdd, onGroupRemove, onPropChange, onRuleAdd, moveRule },
-    disabled: disabledProp,
-    parentDisabled,
-    parentMuted,
-    shiftUpDisabled,
-    shiftDownDisabled,
-    combinator: combinatorProp,
-    rules: rulesProp,
-    not: notProp,
-    // Drag-and-drop
-    dropEffect = 'move',
-    groupItems = false,
-    dragMonitorId = '',
-    dropMonitorId = '',
-    previewRef = null,
-    dragRef = null,
-    dropRef = null,
-    isDragging = false,
-    isOver = false,
-    dropNotAllowed = false,
-  } = props;
+  const pathRef = computed(() => options.path);
+  const schemaRef = computed(() => {
+    const ctx = contextRef.value as { schema?: { value?: Schema } };
+    return ctx?.schema?.value ?? (contextRef.value as { schema?: Schema })?.schema;
+  });
+  const actionsRef = computed(() => (contextRef.value as { actions?: { value?: unknown } })?.actions?.value ?? (contextRef.value as { actions?: unknown })?.actions);
 
-  useDeprecatedProps('ruleGroup', !ruleGroupProp);
+  const ruleGroupFromQuery = computed((): RuleGroupTypeAny | null => {
+    const q = queryRef.value;
+    if (!q || !isRuleGroup(q)) return null;
+    if (pathRef.value.length === 0) return q;
+    const node = findPath(pathRef.value, q);
+    return node && isRuleGroup(node) ? node : null;
+  });
 
-  useReactDndWarning(
-    enableDragAndDrop,
-    !!(dragMonitorId || dropMonitorId || previewRef || dragRef || dropRef)
-  );
+  const disabledProp = computed(() => ruleGroupFromQuery.value?.disabled);
+  const pathDisabled = computed(() => options.disabled ?? false);
+  const parentDisabled = computed(() => options.parentDisabled ?? false);
+  const parentMuted = computed(() => options.parentMuted ?? false);
+  const disabled = computed(() => !!parentDisabled.value || !!pathDisabled.value || !!disabledProp.value);
+  const muted = computed(() => !!parentMuted.value || !!ruleGroupFromQuery.value?.muted);
 
-  const disabled = computed(() => !!parentDisabled || !!disabledProp).value;
-  const muted = computed(() => !!parentMuted || !!ruleGroupProp?.muted).value;
+  const combinators = computed(() => schemaRef.value?.combinators ?? []);
+  const combinator = computed(() => {
+    const rg = ruleGroupFromQuery.value;
+    if (rg && isRuleGroupType(rg)) return rg.combinator;
+    return rg ? (getFirstOption(combinators.value) as string) : (getFirstOption(combinators.value) as string);
+  });
 
-  const combinator = computed(() =>
-    ruleGroupProp && isRuleGroupType(ruleGroupProp)
-      ? ruleGroupProp.combinator
-      : ruleGroupProp
-        ? getFirstOption(combinators)!
-        : (combinatorProp ?? getFirstOption(combinators)!)
-  ).value;
+  const ruleGroup = computed(() => ruleGroupFromQuery.value);
+  const id = computed(() => ruleGroup.value?.id ?? '');
+  const disabledPaths = computed(() => schemaRef.value?.disabledPaths ?? []);
+  const pathsMemo = usePathsMemo({
+    disabled,
+    path: pathRef,
+    nestedArray: computed(() => ruleGroup.value?.rules ?? []),
+    disabledPaths,
+  });
 
-  // TODO?: Type this properly with generics
-  const ruleGroup = computed((): RuleGroupTypeAny => {
-    if (ruleGroupProp) {
-      if (ruleGroupProp.combinator === combinator || independentCombinators) {
-        return ruleGroupProp;
-      }
-      const newRG = structuredClone(ruleGroupProp);
-      newRG.combinator = combinator;
-      return newRG;
+  const onPropChange = (prop: string, value: unknown, path: Path) => {
+    const allow = !disabled.value || prop === 'disabled' || prop === 'muted';
+    if (allow) (actionsRef.value as { onPropChange?: (p: string, v: unknown, path: Path) => void })?.onPropChange?.(prop, value, path);
+  };
+  const onRuleAdd = (rule: unknown, parentPath: Path) => {
+    if (!disabled.value) (actionsRef.value as { onRuleAdd?: (r: unknown, p: Path) => void })?.onRuleAdd?.(rule, parentPath);
+  };
+  const onGroupAdd = (group: unknown, parentPath: Path) => {
+    if (!disabled.value) (actionsRef.value as { onGroupAdd?: (g: unknown, p: Path) => void })?.onGroupAdd?.(group, parentPath);
+  };
+  const onGroupRemove = (path: Path) => {
+    if (!disabled.value) (actionsRef.value as { onGroupRemove?: (p: Path) => void })?.onGroupRemove?.(path);
+  };
+  const moveRule = (from: Path, to: Path | 'up' | 'down', clone?: boolean) => {
+    if (!disabled.value) (actionsRef.value as { moveRule?: (a: Path, b: Path | 'up' | 'down', c?: boolean) => void })?.moveRule?.(from, to, clone);
+  };
+
+  const createRule = () => schemaRef.value?.createRule?.();
+  const createRuleGroup = () => schemaRef.value?.createRuleGroup?.();
+
+  const addRule = (_e?: MouseEvent, _context?: unknown) => {
+    if (!disabled.value && createRule) onRuleAdd(createRule(), pathRef.value);
+  };
+  const addGroup = (_e?: MouseEvent, _context?: unknown) => {
+    if (!disabled.value && createRuleGroup) onGroupAdd(createRuleGroup(), pathRef.value);
+  };
+  const removeGroup = () => {
+    if (!disabled.value) onGroupRemove(pathRef.value);
+  };
+  const cloneGroup = () => {
+    if (!disabled.value) {
+      const p = pathRef.value;
+      const newPath = p.length ? [...p.slice(0, -1), p[p.length - 1] + 1] : [1];
+      moveRule(pathRef.value, newPath, true);
     }
-    return { rules: rulesProp, not: notProp } as RuleGroupTypeIC;
-  }).value;
+  };
+  const onCombinatorChange = (value: string) => onPropChange('combinator', value, pathRef.value);
+  const onNotToggleChange = (checked: boolean) => onPropChange('not', checked, pathRef.value);
+  const toggleLockGroup = () => onPropChange('disabled', !disabled.value, pathRef.value);
+  const toggleMuteGroup = () => onPropChange('muted', !ruleGroup.value?.muted, pathRef.value);
+  const shiftUpDisabled = computed(() => options.shiftUpDisabled ?? false);
+  const shiftDownDisabled = computed(() => options.shiftDownDisabled ?? false);
+  const shiftGroupUp = () => { if (!disabled.value && !shiftUpDisabled.value) moveRule(pathRef.value, 'up'); };
+  const shiftGroupDown = () => { if (!disabled.value && !shiftDownDisabled.value) moveRule(pathRef.value, 'down'); };
+
+  const classNamesProp = computed(() => (schemaRef.value?.classNames ?? {}) as Record<string, string>);
+  const suppressStandardClassnames = computed(() => schemaRef.value?.suppressStandardClassnames ?? false);
+  const validationMap = computed(() => schemaRef.value?.validationMap ?? {});
+  const validationResult = computed(() => validationMap.value[id.value] ?? null);
+  const validationClassName = computed(() => getValidationClassNames(validationResult.value));
+  const getRuleGroupClassnameFn = computed(() => schemaRef.value?.getRuleGroupClassname ?? (() => ''));
 
   const classNames = computed(() => ({
-    header: clsx(
-      suppressStandardClassnames || standardClassnames.header,
-      classNamesProp.header,
-      isOver && dropEffect === 'copy' && classNamesProp.dndCopy,
-      dropNotAllowed && classNamesProp.dndDropNotAllowed,
-      suppressStandardClassnames || {
-        [standardClassnames.dndOver]: isOver,
-        [standardClassnames.dndCopy]: isOver && dropEffect === 'copy',
-        [standardClassnames.dndDropNotAllowed]: dropNotAllowed,
-      }
-    ),
-    shiftActions: clsx(
-      suppressStandardClassnames || standardClassnames.shiftActions,
-      classNamesProp.shiftActions
-    ),
-    dragHandle: clsx(
-      suppressStandardClassnames || standardClassnames.dragHandle,
-      classNamesProp.dragHandle
-    ),
-    combinators: clsx(
-      suppressStandardClassnames || standardClassnames.combinators,
-      classNamesProp.valueSelector,
-      classNamesProp.combinators
-    ),
-    notToggle: clsx(
-      suppressStandardClassnames || standardClassnames.notToggle,
-      classNamesProp.notToggle
-    ),
-    addRule: clsx(
-      suppressStandardClassnames || standardClassnames.addRule,
-      classNamesProp.actionElement,
-      classNamesProp.addRule
-    ),
-    addGroup: clsx(
-      suppressStandardClassnames || standardClassnames.addGroup,
-      classNamesProp.actionElement,
-      classNamesProp.addGroup
-    ),
-    cloneGroup: clsx(
-      suppressStandardClassnames || standardClassnames.cloneGroup,
-      classNamesProp.actionElement,
-      classNamesProp.cloneGroup
-    ),
-    lockGroup: clsx(
-      suppressStandardClassnames || standardClassnames.lockGroup,
-      classNamesProp.actionElement,
-      classNamesProp.lockGroup
-    ),
-    muteGroup: clsx(
-      suppressStandardClassnames || standardClassnames.muteGroup,
-      classNamesProp.actionElement,
-      classNamesProp.muteGroup
-    ),
-    removeGroup: clsx(
-      suppressStandardClassnames || standardClassnames.removeGroup,
-      classNamesProp.actionElement,
-      classNamesProp.removeGroup
-    ),
-    body: clsx(suppressStandardClassnames || standardClassnames.body, classNamesProp.body),
-  })).value;
-
-  const onCombinatorChange: ValueChangeEventHandler = (value) => {
-    if (!disabled) {
-      onPropChange('combinator', value, path);
-    }
-  };
-
-  const onIndependentCombinatorChange = (value: any, index: number, _context?: any) => {
-    if (!disabled) {
-      onPropChange('combinator', value, [...path, index]);
-    }
-  };
-
-  const onNotToggleChange = (checked: boolean, _context?: any) => {
-    if (!disabled) {
-      onPropChange('not', checked, path);
-    }
-  };
-
-  const addRule: ActionElementEventHandler = (_e, context) => {
-    if (!disabled) {
-      const newRule = createRule();
-      onRuleAdd(newRule, path, context);
-    }
-  };
-
-  const addGroup: ActionElementEventHandler = (_e, context) => {
-    if (!disabled) {
-      const newGroup = createRuleGroup();
-      onGroupAdd(newGroup, path, context);
-    }
-  };
-
-  const cloneGroup: ActionElementEventHandler = () => {
-    if (!disabled) {
-      const newPath = [...getParentPath(path), path.at(-1)! + 1];
-      moveRule(path, newPath, true);
-    }
-  };
-
-  const shiftGroupUp = (event?: MouseEvent, _context?: any) => {
-    if (!disabled && !shiftUpDisabled) {
-      moveRule(path, 'up', event?.altKey);
-    }
-  };
-
-  const shiftGroupDown = (event?: MouseEvent, _context?: any) => {
-    if (!disabled && !shiftDownDisabled) {
-      moveRule(path, 'down', event?.altKey);
-    }
-  };
-
-  const toggleLockGroup: ActionElementEventHandler = () => {
-    onPropChange('disabled', !disabled, path);
-  };
-
-  const toggleMuteGroup: ActionElementEventHandler = () => {
-    onPropChange('muted', !ruleGroup.muted, path);
-  };
-
-  const removeGroup: ActionElementEventHandler = () => {
-    if (!disabled) {
-      onGroupRemove(path);
-    }
-  };
-
-  const validationResult = validationMap[id ?? /* istanbul ignore next */ ''];
-  const validationClassName = computed(() => getValidationClassNames(validationResult)).value;
-  
-  const combinatorBasedClassName = computed(() =>
-    independentCombinators ? null : (getOption(combinators, combinator)?.className ?? '')
-  ).value;
-
-  const ruleGroupClassname = computed(() => getRuleGroupClassname(ruleGroup)).value;
+    header: clsx(suppressStandardClassnames.value || standardClassnames.header, classNamesProp.value?.header),
+    body: clsx(suppressStandardClassnames.value || standardClassnames.body, classNamesProp.value?.body),
+    addRule: clsx(standardClassnames.addRule, classNamesProp.value?.addRule),
+    addGroup: clsx(standardClassnames.addGroup, classNamesProp.value?.addGroup),
+    combinators: clsx(classNamesProp.value?.combinators),
+    notToggle: clsx(classNamesProp.value?.notToggle),
+    cloneGroup: clsx(standardClassnames.cloneGroup, classNamesProp.value?.cloneGroup),
+    lockGroup: clsx(classNamesProp.value?.lockGroup),
+    muteGroup: clsx(classNamesProp.value?.muteGroup),
+    removeGroup: clsx(classNamesProp.value?.removeGroup),
+    shiftActions: clsx(standardClassnames.shiftActions, classNamesProp.value?.shiftActions),
+    dragHandle: clsx(classNamesProp.value?.dragHandle),
+  }));
 
   const outerClassName = computed(() =>
     clsx(
-      ruleGroupClassname,
-      combinatorBasedClassName,
-      suppressStandardClassnames || standardClassnames.ruleGroup,
-      classNamesProp.ruleGroup,
-      disabled && classNamesProp.disabled,
-      muted && classNamesProp.muted,
-      isDragging && classNamesProp.dndDragging,
-      isOver && groupItems && classNamesProp.dndGroup,
-      suppressStandardClassnames || {
-        [standardClassnames.disabled]: disabled,
-        [standardClassnames.muted]: muted,
-        [standardClassnames.dndDragging]: isDragging,
-        [standardClassnames.dndGroup]: isOver && groupItems,
-      },
-      validationClassName
+      ruleGroup.value ? getRuleGroupClassnameFn.value(ruleGroup.value) : '',
+      suppressStandardClassnames.value || standardClassnames.ruleGroup,
+      classNamesProp.value?.ruleGroup,
+      disabled.value && classNamesProp.value?.disabled,
+      muted.value && classNamesProp.value?.muted,
+      validationClassName.value
     )
-  ).value;
+  );
 
-  // IMPORTANT: pathsMemo must track changes to ruleGroupProp.rules (the prop)
-  // Since ruleGroupProp comes from props, it's reactive. Access it directly in computed.
-  const pathsMemo = computed(() => {
-    // Access ruleGroupProp.rules to ensure reactivity when props change
-    const rules = ruleGroupProp?.rules ?? rulesProp ?? [];
-    const paths: { path: Path; disabled: boolean }[] = [];
-    for (let i = 0; i < rules.length; i++) {
-      const thisPath = [...path, i];
-      paths[i] = {
-        path: thisPath,
-        disabled: disabled || disabledPaths.some(p => pathsAreEqual(thisPath, p)),
-      };
-    }
-    return paths;
-  });
-
-  const accessibleDescription = computed(() =>
-    accessibleDescriptionGenerator({ path, qbId })
-  ).value;
+  const translations = computed(() => (contextRef.value as { translations?: { value?: RuleGroupProps['translations'] } })?.translations?.value ?? (contextRef.value as { translations?: RuleGroupProps['translations'] })?.translations ?? {});
 
   return {
-    ...props,
-    addGroup,
-    addRule,
-    accessibleDescription,
-    classNames,
-    cloneGroup,
-    combinator,
-    disabled,
-    dragMonitorId,
-    dragRef,
-    dropMonitorId,
-    dropRef,
-    isDragging,
-    isOver,
-    muted,
-    onCombinatorChange,
-    onGroupAdd,
-    onIndependentCombinatorChange,
-    onNotToggleChange,
-    outerClassName,
+    path: pathRef,
     parentDisabled,
-    pathsMemo,
-    previewRef,
-    removeGroup,
+    parentMuted: parentMuted as unknown as typeof parentDisabled,
     ruleGroup,
-    shiftGroupUp,
-    shiftGroupDown,
+    id,
+    disabled,
+    muted,
+    combinator,
+    classNames,
+    outerClassName,
+    pathsMemo,
+    translations,
+    schema: schemaRef,
+    addRule,
+    addGroup,
+    removeGroup,
+    onCombinatorChange,
+    onNotToggleChange,
     toggleLockGroup,
     toggleMuteGroup,
-    validationClassName,
+    cloneGroup,
+    shiftGroupUp,
+    shiftGroupDown,
+    shiftUpDisabled,
+    shiftDownDisabled,
     validationResult,
+    validationClassName,
   };
-};
+}

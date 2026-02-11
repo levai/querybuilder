@@ -1,60 +1,33 @@
 <script setup lang="ts">
-import type { Path, FullField } from '@react-querybuilder/core';
-import { lc } from '@react-querybuilder/core';
-import { useMatchModeEditor } from '../composables/useMatchModeEditor';
-import type { MatchModeEditorProps } from '../types';
+import { computed } from 'vue';
 
-const props = defineProps<MatchModeEditorProps>();
+const props = defineProps<{
+  value?: unknown;
+  options?: Array<{ name: string; label: string }>;
+  className?: string;
+  disabled?: boolean;
+  handleOnChange?: (value: unknown) => void;
+}>();
 
-const {
-  selectorComponent: SelectorComponent = props.schema.controls.valueSelector,
-  numericEditorComponent: NumericEditorComponent = props.schema.controls.valueEditor,
-} = props;
+const selectValue = computed(() => {
+  const v = props.value;
+  if (v && typeof v === 'object' && 'mode' in v) return (v as { mode: string }).mode;
+  return v;
+});
 
-const { thresholdNum, thresholdRule, thresholdSchema, handleChangeMode, handleChangeThreshold } =
-  useMatchModeEditor(props);
-
-const dummyPath: Path = [];
-const dummyFieldData: FullField = { name: '', value: '', label: '' };
-
-const requiresThreshold = (mm?: string | null): boolean =>
-  ['atleast', 'atmost', 'exactly'].includes(lc(mm) ?? '');
+function onSelectChange(e: Event) {
+  const t = (e?.target as HTMLSelectElement);
+  props.handleOnChange?.(t?.value);
+}
 </script>
 
 <template>
-  <component
-    :is="SelectorComponent"
-    :schema="props.schema"
-    :test-id="props.testID"
-    :class="props.className"
-    :title="props.title"
-    :handle-on-change="handleChangeMode"
-    :disabled="props.disabled"
-    :value="props.match.mode"
-    :options="props.options"
-    :multiple="false"
-    :lists-as-arrays="false"
-    :path="dummyPath"
-    :level="0"
-  />
-  <component
-    v-if="requiresThreshold(props.match.mode) && NumericEditorComponent"
-    :is="NumericEditorComponent"
-    skip-hook
-    :test-id="props.testID"
-    input-type="number"
-    :title="props.title"
-    :class="props.className"
-    :disabled="props.disabled"
-    :handle-on-change="handleChangeThreshold"
-    field=""
-    operator=""
-    :value="thresholdNum"
-    value-source="value"
-    :field-data="dummyFieldData"
-    :schema="thresholdSchema"
-    :path="dummyPath"
-    :level="0"
-    :rule="thresholdRule"
-  />
+  <select
+    :value="selectValue"
+    :class="className"
+    :disabled="disabled"
+    @change="onSelectChange"
+  >
+    <option v-for="opt in options" :key="opt.name" :value="opt.name">{{ opt.label }}</option>
+  </select>
 </template>

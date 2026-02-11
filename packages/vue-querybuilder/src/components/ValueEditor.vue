@@ -1,217 +1,93 @@
-<script setup lang="ts" generic="F extends FullField = FullField">
-import type { FullField } from '@react-querybuilder/core';
-import { generateId } from '../utils';
-import { useValueEditor } from '../composables/useValueEditor';
-import type { ValueEditorProps, Schema } from '../types';
+<script setup lang="ts">
+import { computed } from 'vue';
+import { toOptions } from '../utils';
+import ValueSelector from './ValueSelector.vue';
 
-const props = defineProps<ValueEditorProps<F>>();
+const props = withDefaults(
+  defineProps<{
+    value?: unknown;
+    type?: string;
+    inputType?: string | null;
+    disabled?: boolean;
+    className?: string;
+    title?: string;
+    placeholder?: string;
+    handleOnChange?: (value: unknown) => void;
+    values?: Array<{ name: string; label: string }> | Array<{ type: 'optgroup'; label: string; options: Array<{ name: string; label: string }> }>;
+    multiple?: boolean;
+  }>(),
+  { type: 'text', multiple: false }
+);
 
-const {
-  operator,
-  value,
-  handleOnChange,
-  title,
-  className,
-  type = 'text',
-  inputType,
-  values = [],
-  listsAsArrays,
-  fieldData,
-  disabled,
-  separator = null,
-  testID,
-  selectorComponent: SelectorComponent = props.schema.controls.valueSelector,
-  parseNumbers: _parseNumbers,
-  skipHook: _skipHook,
-  valueSource: _valueSource,
-} = props;
+const optionsForSelect = computed(() => toOptions(props.values as import('@react-querybuilder/core').OptionList) ?? []);
 
-const {
-  valueAsArray,
-  multiValueHandler,
-  bigIntValueHandler,
-  parseNumberMethod,
-  valueListItemClassName,
-  inputTypeCoerced,
-} = useValueEditor(props);
+const valueForSelector = computed((): string | string[] | null => {
+  const v = props.value;
+  if (v == null) return null;
+  if (Array.isArray(v)) return v as string[];
+  return String(v);
+});
 
-const placeHolderText = fieldData?.placeholder ?? '';
+const displayValue = computed(() => {
+  const v = props.value;
+  if (v === undefined || v === null) return '';
+  if (typeof v === 'boolean') return v;
+  if (Array.isArray(v)) return v[0] ?? '';
+  return String(v);
+});
 
-// Radio button component
-const RadioButton = (props: {
-  name: string;
-  disabled?: boolean;
-  checked: boolean;
-  handleOnChange: (v: unknown) => void;
-  label: string;
-}) => {
-  const id = generateId();
-  return { id, ...props };
-};
+function onInputChange(e: Event) {
+  const t = (e?.target as HTMLInputElement);
+  if (props.type === 'checkbox') props.handleOnChange?.(!!t?.checked);
+  else props.handleOnChange?.(t?.value ?? '');
+}
 
-if (operator === 'null' || operator === 'notNull') {
-  // Return null for null/notNull operators
+function onSelectChange(v: string | string[]) {
+  props.handleOnChange?.(props.multiple ? v : (Array.isArray(v) ? v[0] : v));
 }
 </script>
 
 <template>
-  <!-- Between/NotBetween operators with text or select type -->
-  <template
-    v-if="
-      (operator === 'between' || operator === 'notBetween') &&
-      (type === 'select' || type === 'text') &&
-      operator !== 'null' &&
-      operator !== 'notNull'
-    "
-  >
-    <span :data-testid="testID" :class="className" :title="title">
-      <input
-        v-if="type === 'text'"
-        :type="inputTypeCoerced"
-        :placeholder="placeHolderText"
-        :value="valueAsArray[0] ?? ''"
-        :class="valueListItemClassName"
-        :disabled="disabled"
-        @change="(e) => multiValueHandler((e.target as HTMLInputElement).value, 0)"
-      />
-      <component
-        v-else
-        :is="SelectorComponent"
-        :schema="(props.schema as Schema<FullField, string>)"
-        :class="valueListItemClassName"
-        :handle-on-change="(v) => multiValueHandler(v, 0)"
-        :disabled="disabled"
-        :value="valueAsArray[0] ?? getFirstOption(values)"
-        :options="values"
-        :lists-as-arrays="listsAsArrays"
-        :path="props.path"
-        :level="props.level"
-      />
-      {{ separator }}
-      <input
-        v-if="type === 'text'"
-        :type="inputTypeCoerced"
-        :placeholder="placeHolderText"
-        :value="valueAsArray[1] ?? ''"
-        :class="valueListItemClassName"
-        :disabled="disabled"
-        @change="(e) => multiValueHandler((e.target as HTMLInputElement).value, 1)"
-      />
-      <component
-        v-else
-        :is="SelectorComponent"
-        :schema="(props.schema as Schema<FullField, string>)"
-        :class="valueListItemClassName"
-        :handle-on-change="(v) => multiValueHandler(v, 1)"
-        :disabled="disabled"
-        :value="valueAsArray[1] ?? getFirstOption(values)"
-        :options="values"
-        :lists-as-arrays="listsAsArrays"
-        :path="props.path"
-        :level="props.level"
-      />
-    </span>
-  </template>
-
-  <!-- Select/Multiselect type -->
-  <component
-    v-else-if="(type === 'select' || type === 'multiselect') && operator !== 'null' && operator !== 'notNull'"
-    :is="SelectorComponent"
-    :schema="(props.schema as Schema<FullField, string>)"
-    :test-id="testID"
-    :class="className"
+  <!-- select / multiselect: 用 ValueSelector 渲染下拉 -->
+  <ValueSelector
+    v-if="type === 'select' || type === 'multiselect'"
+    :value="valueForSelector"
+    :options="optionsForSelect"
     :title="title"
-    :handle-on-change="handleOnChange"
+    :class-name="className"
     :disabled="disabled"
-    :value="value"
-    :options="values"
     :multiple="type === 'multiselect'"
-    :lists-as-arrays="listsAsArrays"
-    :path="props.path"
-    :level="props.level"
+    :handle-on-change="onSelectChange"
   />
-
-  <!-- Textarea type -->
-  <textarea
-    v-else-if="type === 'textarea' && operator !== 'null' && operator !== 'notNull'"
-    :data-testid="testID"
-    :placeholder="placeHolderText"
-    :value="value"
-    :title="title"
-    :class="className"
-    :disabled="disabled"
-    @change="(e) => handleOnChange((e.target as HTMLTextAreaElement).value)"
-  />
-
-  <!-- Switch/Checkbox type -->
+  <!-- checkbox / switch -->
   <input
-    v-else-if="(type === 'switch' || type === 'checkbox') && operator !== 'null' && operator !== 'notNull'"
-    :data-testid="testID"
+    v-else-if="type === 'checkbox' || type === 'switch'"
     type="checkbox"
     :class="className"
     :title="title"
     :checked="!!value"
     :disabled="disabled"
-    @change="(e) => handleOnChange((e.target as HTMLInputElement).checked)"
+    @change="onInputChange"
   />
-
-  <!-- Radio type -->
-  <span
-    v-else-if="type === 'radio' && operator !== 'null' && operator !== 'notNull'"
-    :data-testid="testID"
-    :class="className"
-    :title="title"
-  >
-    <label
-      v-for="v in values"
-      :key="v.name"
-      :for="`radio-${v.name}-${testID}`"
-    >
-      <input
-        :id="`radio-${v.name}-${testID}`"
-        type="radio"
-        :name="`radio-${testID}`"
-        :value="v.name"
-        :disabled="disabled"
-        :checked="value === v.name"
-        @change="handleOnChange(v.name)"
-      />
-      {{ v.label }}
-    </label>
-  </span>
-
-  <!-- Bigint input type -->
-  <input
-    v-else-if="inputType === 'bigint' && operator !== 'null' && operator !== 'notNull'"
-    :data-testid="testID"
-    :type="inputTypeCoerced"
-    :placeholder="placeHolderText"
-    :value="`${value}`"
+  <!-- textarea -->
+  <textarea
+    v-else-if="type === 'textarea'"
+    :placeholder="placeholder"
+    :value="displayValue"
     :title="title"
     :class="className"
     :disabled="disabled"
-    @change="(e) => bigIntValueHandler((e.target as HTMLInputElement).value)"
+    @input="(e: Event) => handleOnChange?.((e.target as HTMLTextAreaElement)?.value)"
   />
-
-  <!-- Default text input -->
+  <!-- 默认 text 输入 -->
   <input
-    v-else-if="operator !== 'null' && operator !== 'notNull'"
-    :data-testid="testID"
-    :type="inputTypeCoerced"
-    :placeholder="placeHolderText"
-    :value="value"
+    v-else
+    :type="inputType ?? 'text'"
+    :placeholder="placeholder"
+    :value="displayValue"
     :title="title"
     :class="className"
     :disabled="disabled"
-    @change="(e) =>
-      handleOnChange(
-        parseNumber((e.target as HTMLInputElement).value, {
-          parseNumbers: parseNumberMethod,
-        })
-      )"
+    @input="onInputChange"
   />
 </template>
-
-<script lang="ts">
-import { getFirstOption, parseNumber } from '@react-querybuilder/core';
-</script>

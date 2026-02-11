@@ -1,26 +1,27 @@
 <script setup lang="ts">
-import { generateId } from '../utils';
-import type { NotToggleProps } from '../types';
+const props = defineProps<{
+  checked?: boolean;
+  label?: string;
+  title?: string;
+  className?: string;
+  disabled?: boolean;
+  handleOnChange?: (checked: boolean) => void;
+}>();
 
-const props = defineProps<NotToggleProps>();
-
-const id = generateId();
+function onChange(e: Event) {
+  const target = e?.target as HTMLInputElement | undefined;
+  props.handleOnChange?.(!!target?.checked);
+}
 </script>
 
 <template>
-  <label
-    :data-testid="props.testID"
-    :class="props.className"
-    :title="props.title"
-    :for="id"
-  >
+  <label :class="className" :title="title">
     <input
-      :id="id"
       type="checkbox"
-      :checked="!!props.checked"
-      :disabled="props.disabled"
-      @change="(e) => props.handleOnChange((e.target as HTMLInputElement).checked)"
+      :checked="checked"
+      :disabled="disabled"
+      @change="onChange"
     />
-    {{ props.label }}
+    {{ label }}
   </label>
 </template>

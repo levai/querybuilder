@@ -1,20 +1,30 @@
-import type { FullField, RuleGroupTypeAny } from '@react-querybuilder/core';
+/**
+ * Vue 3 QueryBuilder context — provide/inject keys for single source (queryRef + path).
+ * @see REFACTOR-VUE3.md
+ */
 import type { InjectionKey, Ref } from 'vue';
-import type { QueryBuilderContextProps, Schema } from '../types';
+import type { RuleGroupTypeAny } from '@react-querybuilder/core';
+import type { QueryActions, Schema, TranslationsFull } from '../types';
 
-export interface QueryBuilderContextType<
-  F extends FullField = FullField,
-  O extends string = string,
-> extends QueryBuilderContextProps<F, O> {
-  initialQuery?: RuleGroupTypeAny;
-  qbId?: string;
-  schema?: Ref<Schema<F, O>>;
+/** 根 query 的 ref，子组件通过 findPath(queryRef.value, path) 取当前节点 */
+export const QUERY_REF_KEY = Symbol(
+  'vue-querybuilder-query-ref'
+) as InjectionKey<Ref<RuleGroupTypeAny | null>>;
+
+/** 更新 query 的唯一入口：(newQuery) => void */
+export const DISPATCH_KEY = Symbol(
+  'vue-querybuilder-dispatch'
+) as InjectionKey<(query: RuleGroupTypeAny) => void>;
+
+/** Schema、translations、actions 等只读上下文 */
+export interface QueryBuilderContextType {
+  schema: Ref<Schema | undefined>;
+  translations?: Ref<TranslationsFull | undefined>;
+  actions?: Ref<QueryActions | undefined>;
+  queryRef?: Ref<RuleGroupTypeAny | null>;
+  dispatch?: (query: RuleGroupTypeAny) => void;
 }
 
-/**
- * Injection key for QueryBuilder context.
- * Used with provide/inject to pass context to child components.
- */
-export const QUERY_BUILDER_CONTEXT_KEY: InjectionKey<Ref<QueryBuilderContextType>> = Symbol(
-  'QueryBuilderContext'
+export const QUERY_BUILDER_CONTEXT_KEY = Symbol(
+  'vue-querybuilder-context'
 ) as InjectionKey<Ref<QueryBuilderContextType>>;

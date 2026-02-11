@@ -1,18 +1,28 @@
 <script setup lang="ts">
-import type { ActionProps } from '../types';
-
-const props = defineProps<ActionProps>();
+defineOptions({ inheritAttrs: false });
+withDefaults(
+  defineProps<{
+    label?: string;
+    title?: string;
+    className?: string;
+    disabled?: boolean;
+    handleOnClick?: (e?: MouseEvent) => void;
+    ruleOrGroup?: unknown;
+    testId?: string;
+  }>(),
+  { disabled: false }
+);
 </script>
 
 <template>
   <button
     type="button"
-    :data-testid="props.testID"
-    :disabled="props.disabled && !props.disabledTranslation"
-    :class="props.className"
-    :title="props.disabledTranslation && props.disabled ? props.disabledTranslation.title : props.title"
-    @click="(e) => props.handleOnClick(e as MouseEvent)"
+    :class="className"
+    :title="title"
+    :disabled="disabled"
+    :data-testid="testId"
+    @click="handleOnClick"
   >
-    {{ props.disabledTranslation && props.disabled ? props.disabledTranslation.label : props.label }}
+    {{ label }}
   </button>
 </template>

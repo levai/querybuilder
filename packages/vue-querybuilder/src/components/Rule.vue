@@ -1,301 +1,178 @@
 <script setup lang="ts">
-import { inject, computed } from 'vue';
+import { computed } from 'vue';
 import { TestID } from '@react-querybuilder/core';
-import { useRule } from '../composables/useRule';
+import { useRule, type UseRulePathOptions } from '../composables/useRule';
 import { useStopEventPropagation } from '../composables/useStopEventPropagation';
-import type { RuleProps, Schema } from '../types';
-import { QUERY_BUILDER_CONTEXT_KEY } from '../context/queryBuilderContext';
-import ShiftActions from './ShiftActions.vue';
-import DragHandle from './DragHandle.vue';
 import ValueSelector from './ValueSelector.vue';
-import MatchModeEditor from './MatchModeEditor.vue';
 import ValueEditor from './ValueEditor.vue';
 import ActionElement from './ActionElement.vue';
-import RuleGroup from './RuleGroup.vue';
+import ShiftActions from './ShiftActions.vue';
+import DragHandle from './DragHandle.vue';
 
-const props = defineProps<Omit<RuleProps, 'schema'>>();
+const props = defineProps<UseRulePathOptions>();
 
-// Define isDev for template use (Vite uses import.meta.env.DEV)
-const isDev = import.meta.env.DEV;
+const r = useRule(props);
 
-const schemaRef = inject(QUERY_BUILDER_CONTEXT_KEY);
-if (!schemaRef) {
-  throw new Error('Rule must be used within QueryBuilder');
+function unwrap<T>(v: T | { value?: T } | undefined): T | undefined {
+  if (v != null && typeof v === 'object' && 'value' in v) return (v as { value: T }).value;
+  return v as T | undefined;
 }
 
-// Extract schema from context (similar to RuleGroup)
-const schema = computed((): Schema => {
-  const contextValue = schemaRef.value;
-  if (!contextValue?.schema) {
-    throw new Error('Schema not found in QueryBuilder context');
-  }
-  // Check if schema is already a Ref or if Vue unwrapped it
-  let schemaValue: any;
-  if (contextValue.schema && typeof contextValue.schema === 'object' && 'value' in contextValue.schema) {
-    schemaValue = (contextValue.schema as any).value;
-  } else {
-    schemaValue = contextValue.schema;
-  }
-  if (!schemaValue) {
-    throw new Error('Schema value is undefined');
-  }
-  return schemaValue as Schema;
+const pathArray = computed(() => (unwrap(r.path) ?? []) as number[]);
+const ruleId = computed(() => (unwrap(r.id) ?? '') as string);
+const outerClass = computed(() => (unwrap(r.outerClassName) ?? '') as string);
+const classNamesVal = computed(() => (unwrap(r.classNames) ?? {}) as Record<string, string>);
+const ruleData = computed(() => unwrap(r.rule));
+const disabledVal = computed(() => !!unwrap(r.disabled));
+const parentDisabledVal = computed(() => !!unwrap(r.parentDisabled));
+const schemaVal = computed(() => unwrap(r.schema));
+const operatorsVal = computed(() => (unwrap(r.operators) ?? []) as { name: string; label: string }[]);
+const valuesVal = computed(() => (unwrap(r.values) ?? []) as Array<{ name: string; label: string }> | Array<{ type: 'optgroup'; label: string; options: Array<{ name: string; label: string }> }>);
+const valueEditorTypeVal = computed(() => (unwrap(r.valueEditorType) ?? 'text') as string);
+const inputTypeVal = computed(() => (unwrap(r.inputType) ?? 'text') as string);
+const hideValueControlsVal = computed(() => !!unwrap(r.hideValueControls));
+const showLockButtons = computed(() => !!schemaVal.value?.showLockButtons);
+const showShiftActions = computed(() => !!schemaVal.value?.showShiftActions);
+const enableDragAndDrop = computed(() => !!schemaVal.value?.enableDragAndDrop);
+const showCloneButtons = computed(() => !!schemaVal.value?.showCloneButtons);
+const showMuteButtons = computed(() => !!schemaVal.value?.showMuteButtons);
+const fieldsList = computed(() => (schemaVal.value?.fields ?? []) as { name: string; label: string }[]);
+const valueSourceOptionsVal = computed(() => (unwrap(r.valueSourceOptions) ?? []) as Array<{ name: string; value?: string; label: string }>);
+const valueSourcesVal = computed(() => (unwrap(r.valueSources) ?? []) as string[]);
+const showValueSourceSelector = computed(() => {
+  const op = (ruleData.value?.operator ?? '').toString().toLowerCase();
+  return !['null', 'notnull'].includes(op) && valueSourcesVal.value.length > 1 && !hideValueControlsVal.value;
 });
 
-const r = useRule({
-  ...props,
-  schema: schema.value,
-} as RuleProps);
+const translationsVal = computed(() => (unwrap(r.translations) ?? {}) as Record<string, { label?: string; title?: string } | undefined>);
+const lockRuleLabel = computed(() => (disabledVal.value ? translationsVal.value?.lockRuleDisabled?.label : translationsVal.value?.lockRule?.label) ?? (disabledVal.value ? 'Unlock' : 'Lock'));
+const lockRuleTitle = computed(() => (disabledVal.value ? translationsVal.value?.lockRuleDisabled?.title : translationsVal.value?.lockRule?.title) ?? (disabledVal.value ? 'Unlock rule' : 'Lock rule'));
+const removeRuleLabel = computed(() => translationsVal.value?.removeRule?.label ?? 'Remove');
+const removeRuleTitle = computed(() => translationsVal.value?.removeRule?.title ?? 'Remove rule');
+const cloneRuleLabel = computed(() => translationsVal.value?.cloneRule?.label ?? '⧉');
+const cloneRuleTitle = computed(() => translationsVal.value?.cloneRule?.title ?? 'Clone rule');
+const muteRuleLabel = computed(() => (ruleData.value?.muted ? translationsVal.value?.unmuteRule?.label : translationsVal.value?.muteRule?.label) ?? (ruleData.value?.muted ? 'Unmute' : 'Mute'));
+const muteRuleTitle = computed(() => (ruleData.value?.muted ? translationsVal.value?.unmuteRule?.title : translationsVal.value?.muteRule?.title) ?? (ruleData.value?.muted ? 'Unmute rule' : 'Mute rule'));
+const shiftLabels = computed(() => ({
+  shiftUp: translationsVal.value?.shiftActionUp?.label ?? '˄',
+  shiftDown: translationsVal.value?.shiftActionDown?.label ?? '˅',
+}));
+const shiftTitles = computed(() => ({
+  shiftUp: translationsVal.value?.shiftActionUp?.title ?? 'Shift up',
+  shiftDown: translationsVal.value?.shiftActionDown?.title ?? 'Shift down',
+}));
+const valueSourceSelectorTitle = computed(() => translationsVal.value?.valueSourceSelector?.title ?? 'Value source');
+const dragHandleLabel = computed(() => translationsVal.value?.dragHandle?.label ?? '⁞⁞');
+const dragHandleTitle = computed(() => translationsVal.value?.dragHandle?.title ?? 'Drag handle');
 
-const cloneRule = useStopEventPropagation(r.cloneRule);
 const toggleLockRule = useStopEventPropagation(r.toggleLockRule);
-const toggleMuteRule = useStopEventPropagation(r.toggleMuteRule);
-const removeRule = useStopEventPropagation(r.removeRule);
-const shiftRuleUp = useStopEventPropagation(r.shiftRuleUp);
-const shiftRuleDown = useStopEventPropagation(r.shiftRuleDown);
+const removeRuleFn = useStopEventPropagation(r.removeRule);
+const cloneRuleFn = useStopEventPropagation(r.cloneRule);
+const toggleMuteRuleFn = useStopEventPropagation(r.toggleMuteRule);
 
-const showFieldSelector = computed(() => {
-  const s = schema.value;
-  if (!s) return false;
-  return !(
-    s.fields.length === 1 &&
-    typeof s.fields[0] === 'object' &&
-    s.fields[0] !== null &&
-    'value' in s.fields[0] &&
-    s.fields[0].value === ''
-  );
-});
-
-const shiftTitles = computed(() => {
-  const s = schema.value;
-  if (!s) return undefined;
-  return s.showShiftActions
-    ? {
-        shiftUp: r.translations.shiftActionUp.title,
-        shiftDown: r.translations.shiftActionDown.title,
-      }
-    : undefined;
-});
-
-const shiftLabels = computed(() => {
-  const s = schema.value;
-  if (!s) return undefined;
-  return s.showShiftActions
-    ? {
-        shiftUp: r.translations.shiftActionUp.label,
-        shiftDown: r.translations.shiftActionDown.label,
-      }
-    : undefined;
-});
+function onFieldChange(v: string | string[]) {
+  r.onChangeField(Array.isArray(v) ? v[0] : v);
+}
+function onOperatorChange(v: string | string[]) {
+  r.onChangeOperator(Array.isArray(v) ? v[0] : v);
+}
+function onValueSourceChange(v: string | string[]) {
+  r.onChangeValueSource(Array.isArray(v) ? v[0] : v);
+}
 </script>
 
 <template>
   <div
     :data-testid="TestID.rule"
-    :class="r.outerClassName"
-    :data-rule-id="r.id"
-    :data-level="r.path.length"
-    :data-path="JSON.stringify(r.path)"
+    :class="outerClass"
+    :data-rule-id="ruleId"
+    :data-level="pathArray.length"
+    :data-path="JSON.stringify(pathArray)"
   >
-    <!-- ShiftActions -->
     <ShiftActions
-      v-if="schema.showShiftActions"
-      :test-id="TestID.shiftActions"
-      :class="r.classNames.shiftActions"
-      :disabled="r.disabled"
-      :shift-up-disabled="props.shiftUpDisabled"
-      :shift-down-disabled="props.shiftDownDisabled"
-      :titles="shiftTitles"
+      v-if="showShiftActions"
+      :shift-up="r.shiftRuleUp"
+      :shift-down="r.shiftRuleDown"
+      :shift-up-disabled="unwrap(r.shiftUpDisabled)"
+      :shift-down-disabled="unwrap(r.shiftDownDisabled)"
       :labels="shiftLabels"
-      :rule-or-group="r.rule"
-      :path="r.path"
-      :level="r.path.length"
-      :schema="schema"
-      @shift-up="shiftRuleUp"
-      @shift-down="shiftRuleDown"
+      :titles="shiftTitles"
+      :class-name="classNamesVal.shiftActions"
+      :disabled="disabledVal"
     />
-
-    <!-- DragHandle -->
     <DragHandle
-      v-if="schema.enableDragAndDrop"
-      :test-id="TestID.dragHandle"
-      :class="r.classNames.dragHandle"
-      :title="r.translations.dragHandle.title"
-      :label="r.translations.dragHandle.label"
-      :rule-or-group="r.rule"
-      :path="r.path"
-      :level="r.path.length"
-      :schema="schema"
+      v-if="enableDragAndDrop"
+      :label="dragHandleLabel"
+      :title="dragHandleTitle"
+      :class-name="classNamesVal.dragHandle"
+      :disabled="disabledVal"
     />
-
-    <!-- FieldSelector -->
     <ValueSelector
-      v-if="showFieldSelector"
-      :test-id="TestID.fields"
-      :class="r.classNames.fields"
-      :title="r.translations.fields.title"
-      :value="r.rule.field"
-      :options="schema.fields ?? []"
-      :disabled="r.disabled"
-      :handle-on-change="r.onChangeField"
-      :path="r.path"
-      :level="r.path.length"
-      :schema="schema"
+      :value="ruleData?.field"
+      :options="fieldsList"
+      title="Field"
+      :disabled="disabledVal"
+      :class-name="classNamesVal.fields"
+      :handle-on-change="onFieldChange"
     />
-
-    <!-- MatchModeEditor or OperatorSelector + ValueEditor -->
-    <template v-if="schema.autoSelectField || r.rule.field !== r.translations.fields.placeholderName">
-      <template v-if="r.matchModes.length > 0">
-        <!-- SubQuery mode -->
-        <MatchModeEditor
-          :test-id="TestID.matchModeEditor"
-          :class-name="r.classNames.matchMode"
-          :title="r.translations.matchMode.title"
-          :field="r.rule.field"
-          :field-data="r.fieldData"
-          :options="r.matchModes"
-          :match="r.rule.match ?? { mode: 'all' }"
-          :disabled="r.disabled"
-          :handle-on-change="r.onChangeMatchMode"
-          :path="r.path"
-          :level="r.path.length"
-          :schema="schema"
-          :class-names="{ matchMode: r.classNames.matchMode, matchThreshold: r.classNames.matchThreshold }"
-          :rule="r.rule"
-        />
-        <!-- SubQuery RuleGroup would be rendered here if needed -->
-      </template>
-      <template v-else>
-        <!-- Normal rule mode -->
-        <!-- OperatorSelector -->
-        <ValueSelector
-          :test-id="TestID.operators"
-          :class="r.classNames.operators"
-          :title="r.translations.operators.title"
-          :value="r.rule.operator"
-          :options="r.operators"
-          :disabled="r.disabled"
-          :handle-on-change="r.onChangeOperator"
-          :path="r.path"
-          :level="r.path.length"
-          :schema="schema"
-        />
-
-        <!-- ValueSourceSelector + ValueEditor -->
-        <template v-if="(schema.autoSelectOperator || r.rule.operator !== r.translations.operators.placeholderName) && !r.hideValueControls">
-          <ValueSelector
-            v-if="!['null', 'notnull'].includes(String(r.rule.operator).toLowerCase()) && r.valueSources.length > 1"
-            :test-id="TestID.valueSourceSelector"
-            :class="r.classNames.valueSource"
-            :title="r.translations.valueSourceSelector.title"
-            :value="r.rule.valueSource ?? 'value'"
-            :options="r.valueSourceOptions as any"
-            :disabled="r.disabled"
-            :handle-on-change="r.onChangeValueSource"
-            :path="r.path"
-            :level="r.path.length"
-            :schema="schema as any"
-          />
-
-          <ValueEditor
-            :test-id="TestID.valueEditor"
-            :class="r.classNames.value"
-            :title="r.translations.value.title"
-            :field="r.rule.field"
-            :operator="r.rule.operator"
-            :value="r.rule.value"
-            :value-source="r.rule.valueSource ?? 'value'"
-            :type="r.valueEditorType"
-            :input-type="r.inputType"
-            :values="r.values"
-            :lists-as-arrays="schema.listsAsArrays"
-            :parse-numbers="schema.parseNumbers"
-            :separator="r.valueEditorSeparator"
-            :field-data="r.fieldData"
-            :disabled="r.disabled"
-            :handle-on-change="r.onChangeValue"
-            :path="r.path"
-            :level="r.path.length"
-            :schema="schema"
-            :rule="r.rule"
-          />
-        </template>
-      </template>
-    </template>
-
-    <!-- CloneRuleAction -->
-    <ActionElement
-      v-if="schema.showCloneButtons"
-      :test-id="TestID.cloneRule"
-      :class="r.classNames.cloneRule"
-      :label="r.translations.cloneRule.label"
-      :title="r.translations.cloneRule.title"
-      :disabled="r.disabled"
-      :rule-or-group="r.rule"
-      :path="r.path"
-      :level="r.path.length"
-      :schema="schema"
-      :handle-on-click="cloneRule"
+    <ValueSelector
+      :value="ruleData?.operator"
+      :options="operatorsVal"
+      title="Operator"
+      :disabled="disabledVal"
+      :class-name="classNamesVal.operators"
+      :handle-on-change="onOperatorChange"
     />
-    <template v-if="isDev">
-      <div v-if="schema.showCloneButtons" style="display: none;">
-        [DEBUG Rule] CloneRuleAction should render: schema.showCloneButtons={{ schema.showCloneButtons }}
-      </div>
-    </template>
-
-    <!-- LockRuleAction -->
+    <ValueSelector
+      v-if="showValueSourceSelector"
+      :value="ruleData?.valueSource ?? 'value'"
+      :options="valueSourceOptionsVal"
+      :title="valueSourceSelectorTitle"
+      :disabled="disabledVal"
+      :class-name="classNamesVal.valueSource"
+      :handle-on-change="onValueSourceChange"
+    />
+    <ValueEditor
+      v-if="!hideValueControlsVal"
+      :value="ruleData?.value"
+      :type="valueEditorTypeVal"
+      :input-type="inputTypeVal"
+      :disabled="disabledVal"
+      :class-name="classNamesVal.value"
+      :values="valuesVal"
+      :multiple="valueEditorTypeVal === 'multiselect'"
+      :handle-on-change="(v: unknown) => r.onChangeValue(v)"
+    />
     <ActionElement
-      v-if="schema.showLockButtons"
-      :test-id="TestID.lockRule"
-      :class="r.classNames.lockRule"
-      :label="r.translations.lockRule.label"
-      :title="r.translations.lockRule.title"
-      :disabled="r.disabled"
-      :disabled-translation="props.parentDisabled ? undefined : r.translations.lockRuleDisabled"
-      :rule-or-group="r.rule"
-      :path="r.path"
-      :level="r.path.length"
-      :schema="schema"
+      v-if="showCloneButtons"
+      :label="cloneRuleLabel"
+      :title="cloneRuleTitle"
+      :disabled="disabledVal"
+      :class-name="classNamesVal.cloneRule"
+      :handle-on-click="cloneRuleFn"
+    />
+    <ActionElement
+      v-if="showLockButtons"
+      :label="lockRuleLabel"
+      :title="lockRuleTitle"
+      :disabled="parentDisabledVal"
+      :class-name="classNamesVal.lockRule"
       :handle-on-click="toggleLockRule"
     />
-    <template v-if="isDev">
-      <div v-if="schema.showLockButtons" style="display: none;">
-        [DEBUG Rule] LockRuleAction should render: schema.showLockButtons={{ schema.showLockButtons }}
-      </div>
-    </template>
-
-    <!-- MuteRuleAction -->
     <ActionElement
-      v-if="schema.showMuteButtons"
-      :test-id="TestID.muteRule"
-      :class="r.classNames.muteRule"
-      :label="r.rule.muted ? r.translations.unmuteRule.label : r.translations.muteRule.label"
-      :title="r.rule.muted ? r.translations.unmuteRule.title : r.translations.muteRule.title"
-      :disabled="r.disabled"
-      :rule-or-group="r.rule"
-      :path="r.path"
-      :level="r.path.length"
-      :schema="schema"
-      :handle-on-click="toggleMuteRule"
+      v-if="showMuteButtons"
+      :label="muteRuleLabel"
+      :title="muteRuleTitle"
+      :disabled="disabledVal"
+      :class-name="classNamesVal.muteRule"
+      :handle-on-click="toggleMuteRuleFn"
     />
-    <template v-if="isDev">
-      <div v-if="schema.showMuteButtons" style="display: none;">
-        [DEBUG Rule] MuteRuleAction should render: schema.showMuteButtons={{ schema.showMuteButtons }}
-      </div>
-    </template>
-
-    <!-- RemoveRuleAction -->
     <ActionElement
-      :test-id="TestID.removeRule"
-      :class="r.classNames.removeRule"
-      :label="r.translations.removeRule.label"
-      :title="r.translations.removeRule.title"
-      :disabled="r.disabled"
-      :rule-or-group="r.rule"
-      :path="r.path"
-      :level="r.path.length"
-      :schema="schema"
-      :handle-on-click="removeRule"
+      :label="removeRuleLabel"
+      :title="removeRuleTitle"
+      :disabled="disabledVal"
+      :class-name="classNamesVal.removeRule"
+      :handle-on-click="removeRuleFn"
     />
   </div>
 </template>

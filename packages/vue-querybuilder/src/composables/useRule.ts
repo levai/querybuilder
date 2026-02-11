@@ -1,404 +1,199 @@
-import type {
-  ActionElementEventHandler,
-  FlexibleOptionList,
-  FullField,
-  FullOperator,
-  FullOption,
-  InputType,
-  MatchModeOptions,
-  Option,
-  OptionList,
-  RuleType,
-  ValidationResult,
-  ValueChangeEventHandler,
-  ValueEditorType,
-  ValueSourceFullOptions,
-  ValueSources,
-} from '@react-querybuilder/core';
+/**
+ * Rule composable — inject queryRef + path, compute rule via findPath.
+ */
+// @ts-nocheck - context schema ref typing
 import {
   clsx,
-  filterFieldsByComparator,
+  findPath,
   getOption,
-  getParentPath,
-  getValidationClassNames,
-  isFlexibleOptionArray,
-  isFlexibleOptionGroupArray,
-  isPojo,
-  lc,
+  isRuleGroup,
   standardClassnames,
-  toFullOptionList,
+  filterFieldsByComparator,
+  getValueSourcesUtil,
 } from '@react-querybuilder/core';
-import { computed, toRef } from 'vue';
-import { useDeprecatedProps } from './useDeprecatedProps';
-import { useFields } from './useFields';
-import { useReactDndWarning } from './useReactDndWarning';
-import { useStopEventPropagation } from './useStopEventPropagation';
-import type { RuleProps, ShiftActionsProps, TranslationsFull } from '../types';
+import type { Path, RuleType } from '@react-querybuilder/core';
+import { computed, inject } from 'vue';
+import { QUERY_REF_KEY, DISPATCH_KEY, QUERY_BUILDER_CONTEXT_KEY } from '../context/queryBuilderContext';
+import type { Schema } from '../types';
+import { getValidationClassNames } from '@react-querybuilder/core';
 
-const defaultSubproperties: FullOption[] = [{ name: '', value: '', label: '' }];
-
-/* oxlint-disable typescript/no-explicit-any */
-export interface UseRule extends RuleProps {
-  classNames: {
-    shiftActions: string;
-    dragHandle: string;
-    fields: string;
-    matchMode: string;
-    matchThreshold: string;
-    operators: string;
-    valueSource: string;
-    value: string;
-    cloneRule: string;
-    lockRule: string;
-    muteRule: string;
-    removeRule: string;
-  };
-  muted?: boolean;
+export interface UseRulePathOptions {
+  path: Path;
+  disabled?: boolean;
+  parentDisabled?: boolean;
   parentMuted?: boolean;
-  cloneRule: ActionElementEventHandler;
-  fieldData: FullField<string, string, string, FullOption, FullOption>;
-  generateOnChangeHandler: (
-    prop: Exclude<keyof RuleType, 'id' | 'path'>
-  ) => ValueChangeEventHandler;
-  onChangeValueSource: ValueChangeEventHandler;
-  onChangeField: ValueChangeEventHandler;
-  onChangeMatchMode: ValueChangeEventHandler;
-  onChangeOperator: ValueChangeEventHandler;
-  onChangeValue: ValueChangeEventHandler;
-  hideValueControls: boolean;
-  inputType: InputType | null;
-  matchModes: MatchModeOptions;
-  operators: OptionList<FullOperator>;
-  outerClassName: string;
-  removeRule: ActionElementEventHandler;
-  shiftRuleUp: (event?: MouseEvent, _context?: any) => void;
-  shiftRuleDown: (event?: MouseEvent, _context?: any) => void;
-  subproperties: ReturnType<typeof useFields<FullField>>;
-  subQueryBuilderProps: Record<string, unknown>;
-  toggleLockRule: ActionElementEventHandler;
-  toggleMuteRule: ActionElementEventHandler;
-  validationResult: boolean | ValidationResult;
-  valueEditorSeparator: any;
-  valueEditorType: ValueEditorType;
-  values: FlexibleOptionList<Option>;
-  valueSourceOptions: ValueSourceFullOptions;
-  valueSources: ValueSources;
+  shiftUpDisabled?: boolean;
+  shiftDownDisabled?: boolean;
+  context?: unknown;
 }
-/* oxlint-enable typescript/no-explicit-any */
 
-/**
- * Prepares all values and methods used by the {@link Rule} component.
- *
- * @group Composables
- */
-export const useRule = (props: RuleProps): UseRule => {
-  // Use toRef to ensure path is always reactive and updates when props.path changes
-  const pathRef = toRef(props, 'path');
-  const {
-    id,
-    rule: ruleProp,
-    schema: {
-      classNames: classNamesProp,
-      fields,
-      fieldMap,
-      getInputType,
-      getMatchModes,
-      getOperators,
-      getSubQueryBuilderProps,
-      getValueEditorType,
-      getValueEditorSeparator,
-      getValueSources,
-      getValues,
-      validationMap,
-      enableDragAndDrop,
-      getRuleClassname,
-      suppressStandardClassnames,
-    },
-    actions: { moveRule, onPropChange, onRuleRemove },
-    disabled: disabledProp,
-    parentDisabled,
-    parentMuted,
-    shiftUpDisabled,
-    shiftDownDisabled,
-    field: fieldProp,
-    operator: operatorProp,
-    value: valueProp,
-    valueSource: valueSourceProp,
-    // Drag-and-drop
-    dropEffect = 'move',
-    groupItems = false,
-    dragMonitorId = '',
-    dropMonitorId = '',
-    dndRef = null,
-    dragRef = null,
-    isDragging = false,
-    isOver = false,
-    dropNotAllowed = false,
-  } = props;
+export function useRule(options: UseRulePathOptions) {
+  const queryRef = inject(QUERY_REF_KEY);
+  const dispatch = inject(DISPATCH_KEY);
+  const contextRef = inject(QUERY_BUILDER_CONTEXT_KEY);
+  if (!queryRef || !dispatch || !contextRef) throw new Error('Rule must be used within QueryBuilder');
 
-  useDeprecatedProps('rule', !ruleProp);
+  const pathRef = computed(() => options.path);
+  const schemaRef = computed(() => {
+    const ctx = contextRef.value as { schema?: { value?: Schema } };
+    return ctx?.schema?.value ?? (contextRef.value as { schema?: Schema })?.schema;
+  });
+  const actionsRef = computed(() => (contextRef.value as { actions?: { value?: unknown } })?.actions?.value ?? (contextRef.value as { actions?: unknown })?.actions);
 
-  useReactDndWarning(enableDragAndDrop, !!(dragMonitorId || dropMonitorId || dndRef || dragRef));
-
-  const disabled = computed(() => !!parentDisabled || !!disabledProp).value;
-  const muted = computed(() => !!parentMuted || !!ruleProp?.muted).value;
-
-  const rule = computed(() =>
-    ruleProp ?? {
-      id,
-      field: fieldProp ?? /* istanbul ignore next */ '',
-      operator: operatorProp ?? /* istanbul ignore next */ '',
-      value: valueProp,
-      valueSource: valueSourceProp,
-    }
-  ).value;
-
-  const classNames = computed(() => ({
-    shiftActions: clsx(
-      suppressStandardClassnames || standardClassnames.shiftActions,
-      classNamesProp.shiftActions
-    ),
-    dragHandle: clsx(
-      suppressStandardClassnames || standardClassnames.dragHandle,
-      classNamesProp.dragHandle
-    ),
-    fields: clsx(
-      suppressStandardClassnames || standardClassnames.fields,
-      classNamesProp.valueSelector,
-      classNamesProp.fields
-    ),
-    matchMode: clsx(
-      suppressStandardClassnames || standardClassnames.matchMode,
-      classNamesProp.valueSelector,
-      classNamesProp.matchMode
-    ),
-    matchThreshold: clsx(
-      suppressStandardClassnames || standardClassnames.matchThreshold,
-      classNamesProp.valueSelector,
-      classNamesProp.matchThreshold
-    ),
-    operators: clsx(
-      suppressStandardClassnames || standardClassnames.operators,
-      classNamesProp.valueSelector,
-      classNamesProp.operators
-    ),
-    valueSource: clsx(
-      suppressStandardClassnames || standardClassnames.valueSource,
-      classNamesProp.valueSelector,
-      classNamesProp.valueSource
-    ),
-    value: clsx(suppressStandardClassnames || standardClassnames.value, classNamesProp.value),
-    cloneRule: clsx(
-      suppressStandardClassnames || standardClassnames.cloneRule,
-      classNamesProp.actionElement,
-      classNamesProp.cloneRule
-    ),
-    lockRule: clsx(
-      suppressStandardClassnames || standardClassnames.lockRule,
-      classNamesProp.actionElement,
-      classNamesProp.lockRule
-    ),
-    muteRule: clsx(
-      suppressStandardClassnames || standardClassnames.muteRule,
-      classNamesProp.actionElement,
-      classNamesProp.muteRule
-    ),
-    removeRule: clsx(
-      suppressStandardClassnames || standardClassnames.removeRule,
-      classNamesProp.actionElement,
-      classNamesProp.removeRule
-    ),
-    valueListItem: clsx(
-      suppressStandardClassnames || standardClassnames.valueListItem,
-      classNamesProp.valueListItem
-    ),
-  })).value;
-
-  const getChangeHandler = (
-    // oxlint-disable-next-line typescript/no-explicit-any
-    prop: Exclude<keyof RuleType, 'id' | 'path'>
-  ) => (value: any, context?: any) => {
-    if (!disabled) {
-      onPropChange(prop, value, pathRef.value, context);
-    }
-  };
-
-  const onChangeField = computed(() => getChangeHandler('field')).value;
-  const onChangeOperator = computed(() => getChangeHandler('operator')).value;
-  const onChangeMatchMode = computed(() => getChangeHandler('match')).value;
-  const onChangeValueSource = computed(() => getChangeHandler('valueSource')).value;
-  const onChangeValue = computed(() => getChangeHandler('value')).value;
-
-  const cloneRule: ActionElementEventHandler = (_event, context) => {
-    if (!disabled) {
-      const path = pathRef.value;
-      const newPath = [...getParentPath(path), path.at(-1)! + 1];
-      moveRule(path, newPath, true, context);
-    }
-  };
-
-  const toggleLockRule: ActionElementEventHandler = (_event, context) =>
-    onPropChange('disabled', !disabled, pathRef.value, context);
-
-  const toggleMuteRule: ActionElementEventHandler = (_event, context) =>
-    onPropChange('muted', !rule.muted, pathRef.value, context);
-
-  const removeRule: ActionElementEventHandler = (_event, _context) => {
-    if (!disabled) {
-      onRuleRemove(pathRef.value);
-    }
-  };
-
-  const shiftRuleUp: ActionElementEventHandler = (event, context) => {
-    if (!disabled && !shiftUpDisabled) {
-      moveRule(pathRef.value, 'up', (event as MouseEvent)?.altKey, context);
-    }
-  };
-
-  const shiftRuleDown: ActionElementEventHandler = (event, context) => {
-    if (!disabled && !shiftDownDisabled) {
-      moveRule(pathRef.value, 'down', (event as MouseEvent)?.altKey, context);
-    }
-  };
-
-  const fieldData: FullField = computed(
-    () => fieldMap?.[rule.field] ?? { name: rule.field, value: rule.field, label: rule.field }
-  ).value;
-  
-  const inputType = computed(
-    () => fieldData.inputType ?? getInputType(rule.field, rule.operator, { fieldData })
-  ).value;
-  
-  const matchModes = computed(() => getMatchModes(rule.field, { fieldData })).value;
-  
-  const operators = computed(() => getOperators(rule.field, { fieldData })).value;
-  
-  const operatorObject = computed(() => getOption(operators, rule.operator)).value;
-  
-  const arity = operatorObject?.arity;
-  const hideValueControls =
-    (typeof arity === 'string' && arity === 'unary') || (typeof arity === 'number' && arity < 2);
-  
-  const valueSourceOptions = computed(() => {
-    const configuredVSs = getValueSources(rule.field, rule.operator, { fieldData });
-    if (rule.valueSource && !getOption(configuredVSs, rule.valueSource)) {
-      return [
-        ...configuredVSs,
-        { name: rule.valueSource, value: rule.valueSource, label: rule.valueSource },
-      ] as ValueSourceFullOptions;
-    }
-    return configuredVSs;
-  }).value;
-  
-  const valueSources = computed(() => valueSourceOptions.map(({ value }) => value) as ValueSources)
-    .value;
-  
-  const valueEditorType = computed(() =>
-    rule.valueSource === 'field'
-      ? 'select'
-      : getValueEditorType(rule.field, rule.operator, { fieldData })
-  ).value;
-  
-  const valueEditorSeparator = computed(() =>
-    getValueEditorSeparator(rule.field, rule.operator, { fieldData })
-  ).value;
-  
-  const values = computed(() => {
-    const v =
-      rule.valueSource === 'field'
-        ? filterFieldsByComparator(fieldData, fields, rule.operator)
-        : getValues(rule.field, rule.operator, { fieldData });
-    return isFlexibleOptionArray(v) || isFlexibleOptionGroupArray(v) ? toFullOptionList(v) : v;
-  }).value;
-  
-  const subQueryBuilderProps = computed(
-    () => getSubQueryBuilderProps(rule.field, { fieldData }) as Record<string, unknown>
-  ).value;
-  
-  const subproperties = useFields({
-    translations: props.translations as TranslationsFull,
-    fields: fieldData.subproperties ?? subQueryBuilderProps.fields ?? defaultSubproperties,
-    autoSelectField: props.schema.autoSelectField || !!fieldData.subproperties,
+  const ruleFromQuery = computed((): RuleType | null => {
+    const q = queryRef.value;
+    if (!q || !isRuleGroup(q)) return null;
+    const node = findPath(pathRef.value, q);
+    return node && !isRuleGroup(node) ? (node as RuleType) : null;
   });
 
-  const validationResult = computed(
-    () =>
-      validationMap[id ?? /* istanbul ignore next */ ''] ??
-      (typeof fieldData.validator === 'function' ? fieldData.validator(rule) : null)
-  ).value;
-  
-  const validationClassName = computed(() => getValidationClassNames(validationResult)).value;
-  
-  const fieldBasedClassName = fieldData?.className ?? '';
-  const operatorBasedClassName = operatorObject?.className ?? '';
-  const hasSubQuery = matchModes.length > 0;
+  const rule = computed(() => ruleFromQuery.value);
+  const disabledProp = computed(() => rule.value?.disabled);
+  const pathDisabled = computed(() => options.disabled ?? false);
+  const parentDisabled = computed(() => options.parentDisabled ?? false);
+  const parentMuted = computed(() => options.parentMuted ?? false);
+  const disabled = computed(() => !!parentDisabled.value || !!pathDisabled.value || !!disabledProp.value);
+  const muted = computed(() => !!parentMuted.value || !!rule.value?.muted);
+
+  const fieldMap = computed(() => schemaRef.value?.fieldMap ?? {});
+  const fields = computed(() => schemaRef.value?.fields ?? []);
+  const fieldData = computed(() => {
+    const r = rule.value;
+    if (!r) return { name: '', value: '', label: '' };
+    const fd = fieldMap.value[r.field as keyof typeof fieldMap.value];
+    return fd ?? { name: r.field, value: r.field, label: r.field };
+  });
+
+  const operators = computed(() => {
+    const getOp = schemaRef.value?.getOperators ?? (() => []);
+    return getOp(rule.value?.field ?? '', { fieldData: fieldData.value });
+  });
+  const values = computed(() => {
+    const r = rule.value;
+    const getVal = schemaRef.value?.getValues ?? (() => []);
+    if (!r) return [];
+    if (r.valueSource === 'field')
+      return filterFieldsByComparator(fieldData.value, fields.value, r.operator);
+    return getVal(r.field, r.operator, { fieldData: fieldData.value });
+  });
+  const valueEditorType = computed(() => {
+    const getVet = schemaRef.value?.getValueEditorType ?? (() => 'text');
+    return rule.value?.valueSource === 'field' ? 'select' : getVet(rule.value?.field ?? '', rule.value?.operator ?? '', { fieldData: fieldData.value });
+  });
+  const inputType = computed(() => {
+    const getIt = schemaRef.value?.getInputType ?? (() => 'text');
+    return getIt(rule.value?.field ?? '', rule.value?.operator ?? '', { fieldData: fieldData.value });
+  });
+  const hideValueControls = computed(() => {
+    const ops = operators.value;
+    const op = Array.isArray(ops)
+    ? (ops as { name?: string }[]).find((o) => o?.name === (rule.value?.operator ?? ''))
+    : undefined;
+    const arity = (op as { arity?: number | string })?.arity;
+    return (typeof arity === 'string' && arity === 'unary') || (typeof arity === 'number' && arity < 2);
+  });
+
+  const valueSourceOptions = computed(() => {
+    const getVs = schemaRef.value?.getValueSources;
+    const opts = getValueSourcesUtil(fieldData.value, rule.value?.operator ?? '', getVs);
+    const vs = rule.value?.valueSource;
+    if (vs && !opts.some((o: { value?: string }) => o?.value === vs))
+      return [...opts, { name: vs, value: vs, label: vs }];
+    return opts;
+  });
+  const valueSources = computed(() => valueSourceOptions.value.map((o: { value?: string }) => o?.value ?? o?.name) as string[]);
+
+  const onPropChange = (prop: string, value: unknown, path: Path, context?: unknown) => {
+    const allow = !disabled.value || prop === 'disabled' || prop === 'muted';
+    if (allow) (actionsRef.value as { onPropChange?: (p: string, v: unknown, path: Path, ctx?: unknown) => void })?.onPropChange?.(prop, value, path, context);
+  };
+  const onRuleRemove = (path: Path) => {
+    if (!disabled.value) (actionsRef.value as { onRuleRemove?: (p: Path) => void })?.onRuleRemove?.(path);
+  };
+  const moveRule = (from: Path, to: Path | 'up' | 'down', clone?: boolean, context?: unknown) => {
+    if (!disabled.value) (actionsRef.value as { moveRule?: (a: Path, b: Path | 'up' | 'down', c?: boolean, d?: unknown) => void })?.moveRule?.(from, to, clone, context);
+  };
+
+  const getChangeHandler = (prop: string) => (value: unknown, context?: unknown) => onPropChange(prop, value, pathRef.value, context);
+  const onChangeField = (v: unknown, ctx?: unknown) => getChangeHandler('field')(v, ctx);
+  const onChangeOperator = (v: unknown, ctx?: unknown) => getChangeHandler('operator')(v, ctx);
+  const onChangeValue = (v: unknown, ctx?: unknown) => getChangeHandler('value')(v, ctx);
+  const onChangeValueSource = (v: unknown, ctx?: unknown) => getChangeHandler('valueSource')(v, ctx);
+
+  const toggleLockRule = () => onPropChange('disabled', !disabled.value, pathRef.value);
+  const toggleMuteRule = () => onPropChange('muted', !rule.value?.muted, pathRef.value);
+  const removeRule = () => onRuleRemove(pathRef.value);
+  const cloneRule = (_e?: MouseEvent, context?: unknown) => {
+    if (!disabled.value) moveRule(pathRef.value, [...pathRef.value.slice(0, -1), pathRef.value[pathRef.value.length - 1] + 1], true, context);
+  };
+  const shiftUpDisabled = computed(() => options.shiftUpDisabled ?? false);
+  const shiftDownDisabled = computed(() => options.shiftDownDisabled ?? false);
+  const shiftRuleUp = () => { if (!disabled.value && !shiftUpDisabled.value) moveRule(pathRef.value, 'up'); };
+  const shiftRuleDown = () => { if (!disabled.value && !shiftDownDisabled.value) moveRule(pathRef.value, 'down'); };
+
+  const classNamesProp = computed(() => (schemaRef.value?.classNames ?? {}) as Record<string, string>);
+  const suppressStandardClassnames = computed(() => schemaRef.value?.suppressStandardClassnames ?? false);
+  const validationMap = computed(() => schemaRef.value?.validationMap ?? {});
+  const id = computed(() => rule.value?.id ?? '');
+  const validationResult = computed(() => validationMap.value[id.value] ?? null);
+  const validationClassName = computed(() => getValidationClassNames(validationResult.value));
+  const getRuleClassnameFn = computed(() => schemaRef.value?.getRuleClassname ?? (() => ''));
+
+  const classNames = computed(() => ({
+    shiftActions: clsx(standardClassnames.shiftActions, classNamesProp.value?.shiftActions),
+    dragHandle: clsx(standardClassnames.dragHandle, classNamesProp.value?.dragHandle),
+    fields: clsx(classNamesProp.value?.fields),
+    operators: clsx(classNamesProp.value?.operators),
+    value: clsx(classNamesProp.value?.value),
+    valueSource: clsx(standardClassnames.valueSource, classNamesProp.value?.valueSource),
+    cloneRule: clsx(standardClassnames.cloneRule, classNamesProp.value?.cloneRule),
+    lockRule: clsx(classNamesProp.value?.lockRule),
+    muteRule: clsx(standardClassnames.muteRule, classNamesProp.value?.muteRule),
+    removeRule: clsx(classNamesProp.value?.removeRule),
+  }));
 
   const outerClassName = computed(() =>
     clsx(
-      getRuleClassname(rule, { fieldData }),
-      fieldBasedClassName,
-      operatorBasedClassName,
-      suppressStandardClassnames || standardClassnames.rule,
-      classNamesProp.rule,
-      // custom conditional classes
-      disabled && classNamesProp.disabled,
-      muted && classNamesProp.muted,
-      isDragging && classNamesProp.dndDragging,
-      isOver && classNamesProp.dndOver,
-      isOver && dropEffect === 'copy' && classNamesProp.dndCopy,
-      isOver && groupItems && classNamesProp.dndGroup,
-      dropNotAllowed && classNamesProp.dndDropNotAllowed,
-      hasSubQuery && classNamesProp.hasSubQuery,
-      // standard conditional classes
-      suppressStandardClassnames || {
-        [standardClassnames.disabled]: disabled,
-        [standardClassnames.muted]: muted,
-        [standardClassnames.dndDragging]: isDragging,
-        [standardClassnames.dndOver]: isOver,
-        [standardClassnames.dndCopy]: isOver && dropEffect === 'copy',
-        [standardClassnames.dndGroup]: isOver && groupItems,
-        [standardClassnames.dndDropNotAllowed]: dropNotAllowed,
-        [standardClassnames.hasSubQuery]: hasSubQuery,
-      },
-      validationClassName
+      rule.value ? getRuleClassnameFn.value(rule.value as RuleType, { fieldData: fieldData.value }) : '',
+      suppressStandardClassnames.value || standardClassnames.rule,
+      classNamesProp.value?.rule,
+      disabled.value && classNamesProp.value?.disabled,
+      muted.value && classNamesProp.value?.muted,
+      validationClassName.value
     )
-  ).value;
+  );
 
   return {
-    ...props,
-    classNames,
-    cloneRule,
-    disabled,
-    dndRef,
-    dragMonitorId,
-    dragRef,
-    dropMonitorId,
-    fieldData,
-    generateOnChangeHandler: getChangeHandler,
-    onChangeField,
-    onChangeMatchMode,
-    onChangeOperator,
-    onChangeValueSource,
-    onChangeValue,
-    hideValueControls,
-    inputType,
-    matchModes,
-    muted,
-    operators,
-    outerClassName,
-    removeRule,
+    path: pathRef,
+    id,
     rule,
-    shiftRuleUp,
-    shiftRuleDown,
-    subproperties,
-    subQueryBuilderProps,
-    toggleLockRule,
-    toggleMuteRule,
-    validationResult,
-    valueEditorSeparator,
-    valueEditorType,
+    disabled,
+    muted,
+    parentDisabled,
+    parentMuted,
+    classNames,
+    outerClassName,
+    fieldData,
+    operators,
     values,
+    valueEditorType,
+    inputType,
+    hideValueControls,
     valueSourceOptions,
     valueSources,
+    onChangeField,
+    onChangeOperator,
+    onChangeValue,
+    onChangeValueSource,
+    toggleLockRule,
+    toggleMuteRule,
+    removeRule,
+    cloneRule,
+    shiftRuleUp,
+    shiftRuleDown,
+    shiftUpDisabled,
+    shiftDownDisabled,
+    schema: schemaRef,
+    translations: computed(() => (contextRef.value as { translations?: { value?: unknown } })?.translations?.value ?? {}),
   };
-};
+}

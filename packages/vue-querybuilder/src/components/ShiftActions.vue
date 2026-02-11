@@ -1,24 +1,35 @@
 <script setup lang="ts">
-import type { ShiftActionsProps } from '../types';
-
-const props = defineProps<ShiftActionsProps>();
+defineProps<{
+  shiftUp?: () => void;
+  shiftDown?: () => void;
+  shiftUpDisabled?: boolean;
+  shiftDownDisabled?: boolean;
+  labels?: { shiftUp?: string; shiftDown?: string };
+  titles?: { shiftUp?: string; shiftDown?: string };
+  className?: string;
+  disabled?: boolean;
+}>();
 </script>
 
 <template>
-  <div :data-testid="props.testID" :class="props.className">
+  <span v-if="shiftUp || shiftDown" :class="className">
     <button
-      :disabled="props.disabled || props.shiftUpDisabled"
-      :title="props.titles?.shiftUp"
-      @click="props.shiftUp"
+      v-if="shiftUp"
+      type="button"
+      :title="titles?.shiftUp"
+      :disabled="disabled || shiftUpDisabled"
+      @click="shiftUp"
     >
-      {{ props.labels?.shiftUp }}
+      {{ labels?.shiftUp ?? '↑' }}
     </button>
     <button
-      :disabled="props.disabled || props.shiftDownDisabled"
-      :title="props.titles?.shiftDown"
-      @click="props.shiftDown"
+      v-if="shiftDown"
+      type="button"
+      :title="titles?.shiftDown"
+      :disabled="disabled || shiftDownDisabled"
+      @click="shiftDown"
     >
-      {{ props.labels?.shiftDown }}
+      {{ labels?.shiftDown ?? '↓' }}
     </button>
-  </div>
+  </span>
 </template>

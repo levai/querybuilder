@@ -12,62 +12,34 @@ import ValueSelector from './components/ValueSelector.vue';
 import type { Controls } from './types';
 
 /**
- * Default components used by {@link QueryBuilder}.
- *
+ * Default control elements for QueryBuilder.
  * @group Defaults
  */
-export const defaultControlElements: {
-  actionElement: typeof ActionElement;
-  addGroupAction: typeof ActionElement;
-  addRuleAction: typeof ActionElement;
-  cloneGroupAction: typeof ActionElement;
-  cloneRuleAction: typeof ActionElement;
-  combinatorSelector: typeof ValueSelector;
-  dragHandle: typeof DragHandle;
-  fieldSelector: typeof ValueSelector;
-  inlineCombinator: typeof InlineCombinator;
-  lockGroupAction: typeof ActionElement;
-  lockRuleAction: typeof ActionElement;
-  matchModeEditor: typeof MatchModeEditor;
-  muteGroupAction: typeof ActionElement;
-  muteRuleAction: typeof ActionElement;
-  notToggle: typeof NotToggle;
-  operatorSelector: typeof ValueSelector;
-  removeGroupAction: typeof ActionElement;
-  removeRuleAction: typeof ActionElement;
-  rule: typeof Rule;
-  ruleGroup: typeof RuleGroup;
-  ruleGroupBodyElements: typeof RuleGroup;
-  ruleGroupHeaderElements: typeof RuleGroup;
-  shiftActions: typeof ShiftActions;
-  valueEditor: typeof ValueEditor;
-  valueSelector: typeof ValueSelector;
-  valueSourceSelector: typeof ValueSelector;
-} = {
-  actionElement: ActionElement,
-  addGroupAction: ActionElement,
-  addRuleAction: ActionElement,
-  cloneGroupAction: ActionElement,
-  cloneRuleAction: ActionElement,
-  combinatorSelector: ValueSelector,
+export const defaultControlElements: Controls<FullField, string> = {
+  actionElement: ActionElement as Controls<FullField, string>['actionElement'],
+  addGroupAction: ActionElement as Controls<FullField, string>['addGroupAction'],
+  addRuleAction: ActionElement as Controls<FullField, string>['addRuleAction'],
+  cloneGroupAction: ActionElement as Controls<FullField, string>['cloneGroupAction'],
+  cloneRuleAction: ActionElement as Controls<FullField, string>['cloneRuleAction'],
+  combinatorSelector: ValueSelector as Controls<FullField, string>['combinatorSelector'],
   dragHandle: DragHandle,
-  fieldSelector: ValueSelector,
+  fieldSelector: ValueSelector as Controls<FullField, string>['fieldSelector'],
   inlineCombinator: InlineCombinator,
-  lockGroupAction: ActionElement,
-  lockRuleAction: ActionElement,
+  lockGroupAction: ActionElement as Controls<FullField, string>['lockGroupAction'],
+  lockRuleAction: ActionElement as Controls<FullField, string>['lockRuleAction'],
   matchModeEditor: MatchModeEditor,
-  muteGroupAction: ActionElement,
-  muteRuleAction: ActionElement,
+  muteGroupAction: ActionElement as Controls<FullField, string>['muteGroupAction'],
+  muteRuleAction: ActionElement as Controls<FullField, string>['muteRuleAction'],
   notToggle: NotToggle,
-  operatorSelector: ValueSelector,
-  removeGroupAction: ActionElement,
-  removeRuleAction: ActionElement,
-  rule: Rule,
-  ruleGroup: RuleGroup,
-  ruleGroupBodyElements: RuleGroup,
-  ruleGroupHeaderElements: RuleGroup,
+  operatorSelector: ValueSelector as Controls<FullField, string>['operatorSelector'],
+  removeGroupAction: ActionElement as Controls<FullField, string>['removeGroupAction'],
+  removeRuleAction: ActionElement as Controls<FullField, string>['removeRuleAction'],
+  rule: Rule as Controls<FullField, string>['rule'],
+  ruleGroup: RuleGroup as Controls<FullField, string>['ruleGroup'],
+  ruleGroupBodyElements: RuleGroup as Controls<FullField, string>['ruleGroupBodyElements'],
+  ruleGroupHeaderElements: RuleGroup as Controls<FullField, string>['ruleGroupHeaderElements'],
   shiftActions: ShiftActions,
   valueEditor: ValueEditor,
   valueSelector: ValueSelector,
-  valueSourceSelector: ValueSelector,
-} satisfies Controls<FullField, string>;
+  valueSourceSelector: ValueSelector as Controls<FullField, string>['valueSourceSelector'],
+};

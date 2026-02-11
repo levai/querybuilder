@@ -1,23 +1,19 @@
-import { computed } from 'vue';
+import type { Ref } from 'vue';
 
-interface RQBMouseEventHandler {
-  // oxlint-disable-next-line typescript/no-explicit-any
-  (event?: MouseEvent, context?: any): void;
-}
+type MouseLikeEvent = { preventDefault?: () => void; stopPropagation?: () => void };
+// Accept any click-like handler; wrapper receives DOM MouseEvent and forwards it.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Handler = (event?: MouseLikeEvent | MouseEvent, context?: any) => void;
 
 /**
- * Wraps an event handler function in another function that calls
- * `event.preventDefault()` and `event.stopPropagation()` first. The
- * returned function accepts and forwards a second `context` argument.
- *
+ * Wraps a handler so it calls preventDefault and stopPropagation first.
  * @group Composables
  */
-export const useStopEventPropagation = (
-  method: RQBMouseEventHandler
-): RQBMouseEventHandler => {
-  return computed(() => (event?: MouseEvent, context?: any) => {
-    event?.preventDefault();
-    event?.stopPropagation();
-    method(event, context);
-  }).value;
-};
+export function useStopEventPropagation<T = Handler>(method: T | Ref<T>): Handler {
+  const fn = (typeof method === 'function' ? method : (method as Ref<T>).value) as Handler;
+  return (event?: MouseLikeEvent | MouseEvent, context?: unknown) => {
+    (event as MouseLikeEvent)?.preventDefault?.();
+    (event as MouseLikeEvent)?.stopPropagation?.();
+    fn?.(event, context);
+  };
+}
