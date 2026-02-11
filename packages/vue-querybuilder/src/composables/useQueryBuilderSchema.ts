@@ -32,7 +32,7 @@ import {
   standardClassnames,
   update,
 } from '@react-querybuilder/core';
-import { computed, ref, watch, type ComputedRef } from 'vue';
+import { computed, ref, toRef, toRefs, watch, type ComputedRef } from 'vue';
 import { useControlledOrUncontrolled } from './useControlledOrUncontrolled';
 import { useDeprecatedProps } from './useDeprecatedProps';
 import { getQueryById, getQueriesStore, setQueryById } from '../state/queryStore';
@@ -61,7 +61,7 @@ export type UseQueryBuilderSchema<
   rootGroup: RuleGroupTypeAny<GetRuleTypeFromGroupWithFieldAndOperator<RG, F, O>>;
   rootGroupDisabled: boolean;
   queryDisabled: boolean;
-  schema: Schema<F, GetOptionIdentifierType<O>>;
+  schema: ComputedRef<Schema<F, GetOptionIdentifierType<O>>>;
   translations: TranslationsFull;
   wrapperClassName: string;
   dndEnabledAttr: string;
@@ -100,6 +100,8 @@ export function useQueryBuilderSchema<
     });
   }
 
+  // 在 Vue 3 中，从 props 解构会丢失响应式
+  // 对于需要响应式的值，使用 toRef 或直接在 computed 中访问 props
   const {
     modelValue: queryProp,
     defaultQuery: defaultQueryProp,
@@ -113,20 +115,6 @@ export function useQueryBuilderSchema<
     onGroupRule = defaultOnAddMoveRemove,
     onGroupGroup = defaultOnAddMoveRemove,
     onRemove = defaultOnAddMoveRemove,
-    showCombinatorsBetweenRules: showCombinatorsBetweenRulesProp = false,
-    showNotToggle: showNotToggleProp = false,
-    showShiftActions: showShiftActionsProp = false,
-    showCloneButtons: showCloneButtonsProp = false,
-    showLockButtons: showLockButtonsProp = false,
-    showMuteButtons: showMuteButtonsProp = false,
-    suppressStandardClassnames: suppressStandardClassnamesProp = false,
-    resetOnFieldChange: resetOnFieldChangeProp = true,
-    resetOnOperatorChange: resetOnOperatorChangeProp = false,
-    autoSelectField: autoSelectFieldProp = true,
-    autoSelectOperator: autoSelectOperatorProp = true,
-    autoSelectValue: autoSelectValueProp = true,
-    addRuleToNewGroups: addRuleToNewGroupsProp = false,
-    listsAsArrays: listsAsArraysProp = false,
     parseNumbers = false,
     disabled = false,
     validator,
@@ -134,6 +122,9 @@ export function useQueryBuilderSchema<
     idGenerator,
     accessibleDescriptionGenerator = generateAccessibleDescription,
   } = props;
+
+  // 在 Vue 3 中，直接从 props 解构会丢失响应式
+  // 对于需要响应式的选项，使用 computed 直接访问 props，这样既能保持响应式又能处理默认值
 
   const {
     qbId,
@@ -163,22 +154,59 @@ export function useQueryBuilderSchema<
     translations,
   } = incomingRqbContext;
 
-  // #region Type coercions
-  const showCombinatorsBetweenRules = !!showCombinatorsBetweenRulesProp;
-  const showNotToggle = !!showNotToggleProp;
-  const showShiftActions = !!showShiftActionsProp;
-  const showCloneButtons = !!showCloneButtonsProp;
-  const showLockButtons = !!showLockButtonsProp;
-  const showMuteButtons = !!showMuteButtonsProp;
-  const resetOnFieldChange = !!resetOnFieldChangeProp;
-  const resetOnOperatorChange = !!resetOnOperatorChangeProp;
-  const autoSelectField = !!autoSelectFieldProp;
-  const autoSelectOperator = !!autoSelectOperatorProp;
-  const autoSelectValue = !!autoSelectValueProp;
-  const addRuleToNewGroups = !!addRuleToNewGroupsProp;
-  const listsAsArrays = !!listsAsArraysProp;
-  const suppressStandardClassnames = !!suppressStandardClassnamesProp;
-  const maxLevels = (props.maxLevels ?? 0) > 0 ? Number(props.maxLevels) : Infinity;
+  // #region Type coercions - 使用 computed 直接访问 props 确保响应式
+  // 直接访问 props 属性，Vue 会自动追踪响应式
+  const showCombinatorsBetweenRules = computed(() => {
+    const value = !!(props.showCombinatorsBetweenRules ?? false);
+    if (import.meta.env.DEV) {
+      console.log('[useQueryBuilderSchema] showCombinatorsBetweenRules computed:', value, 'from props:', props.showCombinatorsBetweenRules);
+    }
+    return value;
+  });
+  const showNotToggle = computed(() => {
+    const value = !!(props.showNotToggle ?? false);
+    if (import.meta.env.DEV) {
+      console.log('[useQueryBuilderSchema] showNotToggle computed:', value, 'from props:', props.showNotToggle);
+    }
+    return value;
+  });
+  const showShiftActions = computed(() => {
+    const value = !!(props.showShiftActions ?? false);
+    if (import.meta.env.DEV) {
+      console.log('[useQueryBuilderSchema] showShiftActions computed:', value, 'from props:', props.showShiftActions);
+    }
+    return value;
+  });
+  const showCloneButtons = computed(() => {
+    const value = !!(props.showCloneButtons ?? false);
+    if (import.meta.env.DEV) {
+      console.log('[useQueryBuilderSchema] showCloneButtons computed:', value, 'from props:', props.showCloneButtons);
+    }
+    return value;
+  });
+  const showLockButtons = computed(() => {
+    const value = !!(props.showLockButtons ?? false);
+    if (import.meta.env.DEV) {
+      console.log('[useQueryBuilderSchema] showLockButtons computed:', value, 'from props:', props.showLockButtons);
+    }
+    return value;
+  });
+  const showMuteButtons = computed(() => {
+    const value = !!(props.showMuteButtons ?? false);
+    if (import.meta.env.DEV) {
+      console.log('[useQueryBuilderSchema] showMuteButtons computed:', value, 'from props:', props.showMuteButtons);
+    }
+    return value;
+  });
+  const resetOnFieldChange = computed(() => !!(props.resetOnFieldChange ?? true));
+  const resetOnOperatorChange = computed(() => !!(props.resetOnOperatorChange ?? false));
+  const autoSelectField = computed(() => !!(props.autoSelectField ?? true));
+  const autoSelectOperator = computed(() => !!(props.autoSelectOperator ?? true));
+  const autoSelectValue = computed(() => !!(props.autoSelectValue ?? true));
+  const addRuleToNewGroups = computed(() => !!(props.addRuleToNewGroups ?? false));
+  const listsAsArrays = computed(() => !!(props.listsAsArrays ?? false));
+  const suppressStandardClassnames = computed(() => !!(props.suppressStandardClassnames ?? false));
+  const maxLevels = computed(() => ((props.maxLevels ?? 0) > 0 ? Number(props.maxLevels) : Infinity));
   // #endregion
 
   const log = (...params: unknown[]) => {
@@ -213,6 +241,10 @@ export function useQueryBuilderSchema<
   // Directly access queriesStore.value[qbId] in computed to ensure reactivity
   const rootGroup = computed(() => {
     const candidateQuery = queryProp ?? queriesStore.value[qbId] ?? defaultQueryProp ?? fallbackQuery;
+    // Ensure candidateQuery is a valid rule group before calling prepareRuleGroup
+    if (!candidateQuery || !isRuleGroup(candidateQuery)) {
+      return fallbackQuery as RuleGroupTypeAny<R>;
+    }
     return (candidateQuery.id ? candidateQuery : prepareRuleGroup(candidateQuery, { idGenerator })) as RuleGroupTypeAny<R>;
   });
 
@@ -332,7 +364,7 @@ export function useQueryBuilderSchema<
     parentPath: Path,
     context?: any
   ) => {
-    if (parentPath.length >= maxLevels) return;
+    if (parentPath.length >= maxLevels.value) return;
     const queryLocal = getQueryById(qbId) as RG;
     // istanbul ignore if
     if (!queryLocal) return;
@@ -378,8 +410,8 @@ export function useQueryBuilderSchema<
     }
 
     const newQuery = update(queryLocal, prop, value, path, {
-      resetOnFieldChange,
-      resetOnOperatorChange,
+      resetOnFieldChange: resetOnFieldChange.value,
+      resetOnOperatorChange: resetOnOperatorChange.value,
       getRuleDefaultOperator: getRuleDefaultOperator as (field: string) => string,
       getValueSources: getValueSourcesMain as (
         field: string,
@@ -573,9 +605,11 @@ export function useQueryBuilderSchema<
   // #endregion
 
   // #region Miscellaneous
-  const dndEnabledAttr = enableDragAndDrop ? 'enabled' : 'disabled';
-  const inlineCombinatorsAttr =
-    independentCombinators || showCombinatorsBetweenRules ? 'enabled' : 'disabled';
+  // 这些属性需要响应式，因为选项可能变化
+  const dndEnabledAttr = computed(() => enableDragAndDrop ? 'enabled' : 'disabled');
+  const inlineCombinatorsAttr = computed(() =>
+    (independentCombinators || showCombinatorsBetweenRules.value) ? 'enabled' : 'disabled'
+  );
   const combinatorPropObject: Pick<RuleGroupProps, 'combinator'> = computed(() =>
     typeof rootGroup.value.combinator === 'string'
       ? { combinator: rootGroup.value.combinator }
@@ -583,20 +617,20 @@ export function useQueryBuilderSchema<
   ).value;
   const wrapperClassName = computed(() =>
     clsx(
-      suppressStandardClassnames || standardClassnames.queryBuilder,
+      suppressStandardClassnames.value || standardClassnames.queryBuilder,
       clsx(controlClassnames.queryBuilder),
       // custom conditional classes
       queryDisabled && controlClassnames.disabled,
       typeof validationResult === 'boolean' && validationResult && controlClassnames.valid,
       typeof validationResult === 'boolean' && !validationResult && controlClassnames.invalid,
       // standard conditional classes
-      suppressStandardClassnames || {
+      suppressStandardClassnames.value || {
         [standardClassnames.disabled]: queryDisabled,
         [standardClassnames.valid]: typeof validationResult === 'boolean' && validationResult,
         [standardClassnames.invalid]: typeof validationResult === 'boolean' && !validationResult,
       }
     )
-  ).value;
+  );
   // #endregion
 
   // #region Setup overrides
@@ -610,49 +644,65 @@ export function useQueryBuilderSchema<
   // #endregion
 
   // #region Schema/actions
+  // schema 保持为 computed，确保选项变化时能响应式更新
   const schema = computed(
-    (): Schema<F, GetOptionIdentifierType<O>> => ({
-      addRuleToNewGroups,
-      accessibleDescriptionGenerator,
-      autoSelectField,
-      autoSelectOperator,
-      autoSelectValue,
-      classNames: controlClassnames,
-      combinators,
-      controls,
-      createRule,
-      createRuleGroup: createRuleGroupOverride,
-      disabledPaths,
-      enableDragAndDrop,
-      fieldMap: fieldMap as FullOptionMap<F>,
-      fields,
-      dispatchQuery,
-      getQuery,
-      getInputType: getInputTypeMain,
-      getOperators: getOperatorsMain,
-      getMatchModes: getMatchModesMain,
-      getRuleClassname,
-      getRuleGroupClassname,
-      getSubQueryBuilderProps: getSubQueryBuilderPropsMain,
-      getValueEditorSeparator,
-      getValueEditorType: getValueEditorTypeMain,
-      getValues: getValuesMain,
-      getValueSources: getValueSourcesMain,
-      independentCombinators,
-      listsAsArrays,
-      maxLevels,
-      parseNumbers,
-      qbId,
-      showCloneButtons,
-      showCombinatorsBetweenRules,
-      showLockButtons,
-      showMuteButtons,
-      showNotToggle,
-      showShiftActions,
-      suppressStandardClassnames,
-      validationMap,
-    })
-  ).value;
+    (): Schema<F, GetOptionIdentifierType<O>> => {
+      const schemaValue = {
+        addRuleToNewGroups: addRuleToNewGroups.value,
+        accessibleDescriptionGenerator,
+        autoSelectField: autoSelectField.value,
+        autoSelectOperator: autoSelectOperator.value,
+        autoSelectValue: autoSelectValue.value,
+        classNames: controlClassnames,
+        combinators,
+        controls,
+        createRule,
+        createRuleGroup: createRuleGroupOverride,
+        disabledPaths,
+        enableDragAndDrop,
+        fieldMap: fieldMap as FullOptionMap<F>,
+        fields,
+        dispatchQuery,
+        getQuery,
+        getInputType: getInputTypeMain,
+        getOperators: getOperatorsMain,
+        getMatchModes: getMatchModesMain,
+        getRuleClassname,
+        getRuleGroupClassname,
+        getSubQueryBuilderProps: getSubQueryBuilderPropsMain,
+        getValueEditorSeparator,
+        getValueEditorType: getValueEditorTypeMain,
+        getValues: getValuesMain,
+        getValueSources: getValueSourcesMain,
+        independentCombinators,
+        listsAsArrays: listsAsArrays.value,
+        maxLevels: maxLevels.value,
+        parseNumbers,
+        qbId,
+        showCloneButtons: showCloneButtons.value,
+        showCombinatorsBetweenRules: showCombinatorsBetweenRules.value,
+        showLockButtons: showLockButtons.value,
+        showMuteButtons: showMuteButtons.value,
+        showNotToggle: showNotToggle.value,
+        showShiftActions: showShiftActions.value,
+        suppressStandardClassnames: suppressStandardClassnames.value,
+        validationMap,
+      };
+      
+      if (import.meta.env.DEV) {
+        console.log('[useQueryBuilderSchema] schema computed:', {
+          showCloneButtons: schemaValue.showCloneButtons,
+          showLockButtons: schemaValue.showLockButtons,
+          showMuteButtons: schemaValue.showMuteButtons,
+          showNotToggle: schemaValue.showNotToggle,
+          showShiftActions: schemaValue.showShiftActions,
+          showCombinatorsBetweenRules: schemaValue.showCombinatorsBetweenRules,
+        });
+      }
+      
+      return schemaValue;
+    }
+  );
 
   const actions = computed(
     (): QueryActions => ({
@@ -680,9 +730,9 @@ export function useQueryBuilderSchema<
     },
     schema,
     translations,
-    wrapperClassName,
-    dndEnabledAttr,
-    inlineCombinatorsAttr,
+    wrapperClassName: wrapperClassName.value,
+    dndEnabledAttr: dndEnabledAttr.value,
+    inlineCombinatorsAttr: inlineCombinatorsAttr.value,
     combinatorPropObject,
   };
 }

@@ -15,6 +15,9 @@ import RuleGroup from './RuleGroup.vue';
 
 const props = defineProps<Omit<RuleProps, 'schema'>>();
 
+// Define isDev for template use (Vite uses import.meta.env.DEV)
+const isDev = import.meta.env.DEV;
+
 const schemaRef = inject(QUERY_BUILDER_CONTEXT_KEY);
 if (!schemaRef) {
   throw new Error('Rule must be used within QueryBuilder');
@@ -234,6 +237,11 @@ const shiftLabels = computed(() => {
       :schema="schema"
       :handle-on-click="cloneRule"
     />
+    <template v-if="isDev">
+      <div v-if="schema.showCloneButtons" style="display: none;">
+        [DEBUG Rule] CloneRuleAction should render: schema.showCloneButtons={{ schema.showCloneButtons }}
+      </div>
+    </template>
 
     <!-- LockRuleAction -->
     <ActionElement
@@ -250,6 +258,11 @@ const shiftLabels = computed(() => {
       :schema="schema"
       :handle-on-click="toggleLockRule"
     />
+    <template v-if="isDev">
+      <div v-if="schema.showLockButtons" style="display: none;">
+        [DEBUG Rule] LockRuleAction should render: schema.showLockButtons={{ schema.showLockButtons }}
+      </div>
+    </template>
 
     <!-- MuteRuleAction -->
     <ActionElement
@@ -265,6 +278,11 @@ const shiftLabels = computed(() => {
       :schema="schema"
       :handle-on-click="toggleMuteRule"
     />
+    <template v-if="isDev">
+      <div v-if="schema.showMuteButtons" style="display: none;">
+        [DEBUG Rule] MuteRuleAction should render: schema.showMuteButtons={{ schema.showMuteButtons }}
+      </div>
+    </template>
 
     <!-- RemoveRuleAction -->
     <ActionElement

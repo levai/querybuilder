@@ -18,8 +18,11 @@ import Rule from './Rule.vue';
 
 const props = defineProps<Omit<UseRuleGroupProps, 'schema'>>();
 
+// Define isDev for template use (Vite uses import.meta.env.DEV)
+const isDev = import.meta.env.DEV;
+
 // Debug: log props
-if (import.meta.env.DEV) {
+if (isDev) {
   console.log('RuleGroup component mounted', {
     hasProps: !!props,
     hasRuleGroup: !!props.ruleGroup,
@@ -66,14 +69,14 @@ const schema = computed(() => {
     throw new Error('Schema not found in QueryBuilder context');
   }
   
-  // Check if schema is already a Ref or if Vue unwrapped it
-  // If it has a 'value' property, it's a Ref, otherwise it's already the Schema object
+  // contextValue.schema is a computed ref, access its value
+  // If it has a 'value' property, it's a Ref/ComputedRef, access .value
   let schemaValue: any;
   if (contextValue.schema && typeof contextValue.schema === 'object' && 'value' in contextValue.schema) {
-    // It's a Ref<Schema>, access .value
+    // It's a Ref<Schema> or ComputedRef<Schema>, access .value
     schemaValue = (contextValue.schema as any).value;
   } else {
-    // Vue unwrapped it, it's already the Schema object
+    // Already unwrapped or direct value
     schemaValue = contextValue.schema;
   }
   
@@ -288,6 +291,11 @@ const shiftLabels = computed(() => {
         :action-class="classNames.cloneGroup"
         :handle-on-click="cloneGroup"
       />
+      <template v-if="isDev">
+        <div v-if="schema.showCloneButtons && props.path.length > 0" style="display: none;">
+          [DEBUG] CloneGroupAction should render: schema.showCloneButtons={{ schema.showCloneButtons }}, path.length={{ props.path.length }}
+        </div>
+      </template>
 
       <!-- LockGroupAction -->
       <ActionElement
@@ -310,6 +318,11 @@ const shiftLabels = computed(() => {
         :action-class="classNames.lockGroup"
         :handle-on-click="toggleLockGroup"
       />
+      <template v-if="isDev">
+        <div v-if="schema.showLockButtons" style="display: none;">
+          [DEBUG] LockGroupAction should render: schema.showLockButtons={{ schema.showLockButtons }}
+        </div>
+      </template>
 
       <!-- MuteGroupAction -->
       <ActionElement
@@ -332,6 +345,11 @@ const shiftLabels = computed(() => {
         :action-class="classNames.muteGroup"
         :handle-on-click="toggleMuteGroup"
       />
+      <template v-if="isDev">
+        <div v-if="schema.showMuteButtons" style="display: none;">
+          [DEBUG] MuteGroupAction should render: schema.showMuteButtons={{ schema.showMuteButtons }}
+        </div>
+      </template>
 
       <!-- RemoveGroupAction -->
       <ActionElement

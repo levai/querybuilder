@@ -6,7 +6,6 @@ export { default as InlineCombinator } from './InlineCombinator.vue';
 export { default as MatchModeEditor } from './MatchModeEditor.vue';
 export { default as NotToggle } from './NotToggle.vue';
 export { default as QueryBuilder } from './QueryBuilder.vue';
-export { default as QueryBuilderInternal } from './QueryBuilderInternal.vue';
 export { default as Rule } from './Rule.vue';
 export { default as RuleGroup } from './RuleGroup.vue';
 export { default as ShiftActions } from './ShiftActions.vue';
