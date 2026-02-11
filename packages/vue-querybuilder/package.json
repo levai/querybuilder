@@ -5,6 +5,7 @@
   "type": "module",
   "main": "./dist/vue-querybuilder.cjs",
   "module": "./dist/vue-querybuilder.js",
+  "types": "./dist/vue-querybuilder.d.ts",
   "exports": {
     ".": {
       "import": {
@@ -98,7 +99,6 @@
     },
     "./dist/*": "./dist/*"
   },
-  "types": "./dist/index.d.ts",
   "files": ["dist", "dist/styles", "dist/fwd"],
   "sideEffects": ["*.css", "*.scss"],
   "repository": {
@@ -111,8 +111,8 @@
   "homepage": "https://react-querybuilder.js.org/",
   "scripts": {
     "start": "vite",
-    "build": "vite build && bun run build:fwd && bun run build:css && vue-tsc -p tsconfig.build.json",
-    "build:fwd": "node scripts/build-fwd.mjs",
+    "build": "bun --bun tsdown && bun run build:css && vue-tsc -p tsconfig.build.json",
+    "build:main": "bun --bun tsdown",
     "build:css": "mkdir -p dist/styles && cp ../core/src/*.scss dist && cp ../core/src/styles/*.scss dist/styles && bun sass --style=compressed --silence-deprecation=if-function dist",
     "typecheck": "vue-tsc --noEmit",
     "test": "bunx vitest run"
@@ -126,13 +126,14 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
-    "sass": "catalog:",
-    "typescript": "catalog:",
-    "vite": "catalog:",
-    "vue": "^3.5.13",
-    "vue-tsc": "^2.2.0",
     "@vue/test-utils": "^2.4.6",
     "jsdom": "^25.0.0",
-    "vitest": "^2.1.6"
+    "sass": "catalog:",
+    "typescript": "catalog:",
+    "unplugin-vue": "^7.1.1",
+    "vite": "catalog:",
+    "vitest": "^2.1.6",
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.2.0"
   }
 }
