@@ -10,25 +10,25 @@ const props = defineProps<{
   testId?: string;
 }>();
 
-const selectValue = computed(() => {
-  const v = props.value;
-  if (v && typeof v === 'object' && 'mode' in v) return (v as { mode: string }).mode;
-  return v;
+// 使用 computed 实现 v-model 的双向绑定
+const modelValue = computed({
+  get() {
+    const v = props.value;
+    if (v && typeof v === 'object' && 'mode' in v) return (v as { mode: string }).mode;
+    return v ?? '';
+  },
+  set(newValue: string) {
+    props.handleOnChange?.(newValue);
+  },
 });
-
-function onSelectChange(e: Event) {
-  const t = (e?.target as HTMLSelectElement);
-  props.handleOnChange?.(t?.value);
-}
 </script>
 
 <template>
   <select
-    :value="selectValue"
+    v-model="modelValue"
     :class="className"
     :disabled="disabled"
     :data-testid="testId"
-    @change="onSelectChange"
   >
     <option v-for="opt in options" :key="opt.name" :value="opt.name">{{ opt.label }}</option>
   </select>

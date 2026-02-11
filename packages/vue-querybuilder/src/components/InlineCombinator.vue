@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { TestID } from '@react-querybuilder/core';
 
 const props = defineProps<{
@@ -11,17 +12,26 @@ const props = defineProps<{
   disabled?: boolean;
   testId?: string;
 }>();
+
+// 使用 computed 实现 v-model 的双向绑定
+const modelValue = computed({
+  get() {
+    return props.value ?? '';
+  },
+  set(newValue: string) {
+    props.handleOnChange?.(newValue);
+  },
+});
 </script>
 
 <template>
   <div :class="props.betweenRulesClassName" :data-testid="props.testId ?? TestID.inlineCombinator">
     <select
-      :value="props.value"
+      v-model="modelValue"
       :title="props.title"
       :class="props.className"
       :disabled="props.disabled"
       :data-testid="TestID.combinators"
-      @change="(e: Event) => props.handleOnChange?.((e.target as HTMLSelectElement).value)"
     >
       <option v-for="opt in props.options" :key="opt.name" :value="opt.name">{{ opt.label }}</option>
     </select>
