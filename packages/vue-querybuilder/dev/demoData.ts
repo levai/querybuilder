@@ -1,12 +1,12 @@
 /**
  * 与 https://react-querybuilder.js.org/demo 一致的测试数据（fields + initialQuery）
  */
-import type { RuleGroupType, RuleType } from '@react-querybuilder/core';
+import type { RuleGroupType, RuleType } from '../src';
 import {
   defaultOperators,
   generateID,
   toFullOption,
-} from '@react-querybuilder/core';
+} from '../src';
 
 // 与 website/src/pages/demo/_constants/musicalInstruments.ts 一致（简化分组）
 const musicalInstruments = [

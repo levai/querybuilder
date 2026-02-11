@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue';
-import type { RuleGroupType, RuleGroupTypeAny, RuleType, ExportFormat } from '@react-querybuilder/core';
-import { defaultValidator, generateAccessibleDescription, isRuleGroup, formatQuery } from '@react-querybuilder/core';
-import type { QueryValidator } from '@react-querybuilder/core';
-import { QueryBuilder } from '../src';
+import type { RuleGroupType, RuleGroupTypeAny, RuleType, ExportFormat, QueryValidator } from '../src';
+import { defaultValidator, generateAccessibleDescription, isRuleGroup, formatQuery, QueryBuilder } from '../src';
 import { fields, initialQuery } from './demoData';
 import { defaultOptions, optionOrder, optionLabels } from './demoOptions';
 
