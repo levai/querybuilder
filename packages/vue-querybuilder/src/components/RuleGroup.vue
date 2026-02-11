@@ -61,6 +61,7 @@ const showMuteButtonsVal = computed(() => !!schemaVal.value?.showMuteButtons);
 const cloneGroupLabel = computed(() => (translationsVal.value?.cloneRuleGroup as { label?: string })?.label ?? '⧉');
 const cloneGroupTitle = computed(() => (translationsVal.value?.cloneRuleGroup as { title?: string })?.title ?? 'Clone group');
 const groupMuted = computed(() => !!ruleGroupVal.value?.muted);
+const accessibleDescription = computed(() => (unwrapRef(r.accessibleDescription) ?? '') as string);
 const muteGroupLabel = computed(() => (groupMuted.value ? (translationsVal.value?.unmuteGroup as { label?: string })?.label : (translationsVal.value?.muteGroup as { label?: string })?.label) ?? '');
 const muteGroupTitle = computed(() => (groupMuted.value ? (translationsVal.value?.unmuteGroup as { title?: string })?.title : (translationsVal.value?.muteGroup as { title?: string })?.title) ?? '');
 const shiftLabels = computed(() => ({
@@ -91,7 +92,15 @@ function shiftDownDisabledAt(idx: number) {
 </script>
 
 <template>
-  <div :class="outerClass" :data-testid="TestID.ruleGroup" :data-rule-group-id="groupId">
+  <div
+    :class="outerClass"
+    :title="accessibleDescription"
+    :data-testid="TestID.ruleGroup"
+    :data-not="ruleGroupVal?.not ? 'true' : undefined"
+    :data-rule-group-id="groupId"
+    :data-level="props.path.length"
+    :data-path="JSON.stringify(props.path)"
+  >
     <div :class="classNamesVal.header">
       <ShiftActions
         v-if="showShiftActionsVal"
@@ -119,6 +128,7 @@ function shiftDownDisabledAt(idx: number) {
         :options="combinatorsList"
         :test-id="TestID.combinators"
         :title="combinatorTitle"
+        :class-name="classNamesVal.combinators"
         :disabled="disabledVal"
         :handle-on-change="(v: string | string[]) => r.onCombinatorChange(Array.isArray(v) ? v[0] : v)"
       />
@@ -126,6 +136,7 @@ function shiftDownDisabledAt(idx: number) {
         v-if="schemaVal?.showNotToggle"
         :test-id="TestID.notToggle"
         :checked="!!ruleGroupVal?.not"
+        :class-name="classNamesVal.notToggle"
         :disabled="disabledVal"
         :handle-on-change="r.onNotToggleChange"
       />

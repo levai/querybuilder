@@ -61,7 +61,7 @@ export interface UseQueryBuilderSchemaReturn<
   wrapperClassName: Ref<string>;
   dndEnabledAttr: Ref<string>;
   inlineCombinatorsAttr: Ref<string>;
-  queryDisabled: boolean;
+  queryDisabled: ComputedRef<boolean>;
   rootGroupDisabled: ComputedRef<boolean>;
   rqbContext: Ref<{
     schema: Ref<Schema<F, O> | undefined>;
@@ -247,7 +247,7 @@ export function useQueryBuilderSchema<
   const disabledPaths = computed(() =>
     Array.isArray(props.value.disabled) ? props.value.disabled : defaultDisabledPaths
   );
-  const queryDisabled = props.value.disabled === true;
+  const queryDisabled = computed(() => props.value.disabled === true);
   const rootGroup = computed(() => queryRef.value ?? (prepareRuleGroup(createRuleGroup() as RuleGroupTypeAny, { idGenerator }) as RG));
   const rootGroupDisabledRef = computed(
     () => rootGroup.value?.disabled === true || disabledPaths.value.some((p: Path) => p.length === 0)
@@ -256,7 +256,7 @@ export function useQueryBuilderSchema<
   const onRuleAdd = (rule: RuleType, parentPath: Path) => {
     const queryLocal = getQuery();
     if (!queryLocal) return;
-    if (pathIsDisabled(parentPath, queryLocal) || queryDisabled) return;
+    if (pathIsDisabled(parentPath, queryLocal) || queryDisabled.value) return;
     const next = props.value.onAddRule?.(rule, parentPath, queryLocal as RG) ?? true;
     const newRule = next === true ? rule : next;
     const newQuery = add(queryLocal as RuleGroupTypeAny, newRule, parentPath, {
@@ -270,7 +270,7 @@ export function useQueryBuilderSchema<
     if (parentPath.length >= (props.value.maxLevels ?? Infinity)) return;
     const queryLocal = getQuery();
     if (!queryLocal) return;
-    if (pathIsDisabled(parentPath, queryLocal) || queryDisabled) return;
+    if (pathIsDisabled(parentPath, queryLocal) || queryDisabled.value) return;
     const next = props.value.onAddGroup?.(ruleGroup, parentPath, queryLocal) ?? true;
     const newGroup = next === true ? ruleGroup : next;
     const newQuery = add(queryLocal as RuleGroupTypeAny, newGroup, parentPath, {
@@ -283,7 +283,7 @@ export function useQueryBuilderSchema<
   const onPropChange = (prop: UpdateableProperties, value: unknown, path: Path) => {
     const queryLocal = getQuery();
     if (!queryLocal) return;
-    if ((pathIsDisabled(path, queryLocal) && prop !== 'disabled') || queryDisabled) return;
+    if ((pathIsDisabled(path, queryLocal) && prop !== 'disabled') || queryDisabled.value) return;
     const newQuery = update(queryLocal as RuleGroupTypeAny, prop, value, path, {
       resetOnFieldChange: props.value.resetOnFieldChange ?? true,
       resetOnOperatorChange: props.value.resetOnOperatorChange ?? false,
@@ -298,7 +298,7 @@ export function useQueryBuilderSchema<
   const onRuleOrGroupRemove = (path: Path) => {
     const queryLocal = getQuery();
     if (!queryLocal) return;
-    if (pathIsDisabled(path, queryLocal) || queryDisabled) return;
+    if (pathIsDisabled(path, queryLocal) || queryDisabled.value) return;
     const node = findPath(path, queryLocal as RuleGroupTypeAny);
     if (node && (props.value.onRemove?.(node, path, queryLocal as RG) ?? true)) {
       dispatchQuery(remove(queryLocal as RuleGroupTypeAny, path));
@@ -308,7 +308,7 @@ export function useQueryBuilderSchema<
   const moveRule = (oldPath: Path, newPath: Path | 'up' | 'down', clone?: boolean) => {
     const queryLocal = getQuery();
     if (!queryLocal) return;
-    if (pathIsDisabled(oldPath, queryLocal) || queryDisabled) return;
+    if (pathIsDisabled(oldPath, queryLocal) || queryDisabled.value) return;
     const nextQuery = move(queryLocal as RuleGroupTypeAny, oldPath, newPath, {
       clone,
       combinators: combinators.value,
@@ -383,10 +383,10 @@ export function useQueryBuilderSchema<
     clsx(
       props.value.suppressStandardClassnames || standardClassnames.queryBuilder,
       controlClassnames.value?.queryBuilder,
-      queryDisabled && controlClassnames.value?.disabled,
+      queryDisabled.value && controlClassnames.value?.disabled,
       typeof validationResult.value === 'boolean' && validationResult.value && controlClassnames.value?.valid,
       typeof validationResult.value === 'boolean' && !validationResult.value && controlClassnames.value?.invalid,
-      { [standardClassnames.disabled]: queryDisabled }
+      { [standardClassnames.disabled]: queryDisabled.value }
     )
   );
 

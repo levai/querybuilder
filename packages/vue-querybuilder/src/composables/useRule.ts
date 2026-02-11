@@ -112,6 +112,17 @@ export function useRule(options: UseRulePathOptions) {
     return getM(rule.value?.field ?? '', { fieldData: fieldData.value });
   });
 
+  const subQueryBuilderProps = computed(() => {
+    const getSub = schemaRef.value?.getSubQueryBuilderProps ?? (() => ({}));
+    return (getSub(rule.value?.field ?? '', { fieldData: fieldData.value }) ?? {}) as Record<string, unknown>;
+  });
+  const subpropertiesFields = computed(() => {
+    const fd = fieldData.value as { subproperties?: unknown[] };
+    const subProps = subQueryBuilderProps.value as { fields?: unknown[] };
+    const defaultSub: unknown[] = [{ name: '', value: '', label: '' }];
+    return fd?.subproperties ?? subProps?.fields ?? defaultSub;
+  });
+
   const onPropChange = (prop: string, value: unknown, path: Path, context?: unknown) => {
     const allow = !disabled.value || prop === 'disabled' || prop === 'muted';
     if (allow) (actionsRef.value as { onPropChange?: (p: string, v: unknown, path: Path, ctx?: unknown) => void })?.onPropChange?.(prop, value, path, context);
@@ -152,15 +163,15 @@ export function useRule(options: UseRulePathOptions) {
   const classNames = computed(() => ({
     shiftActions: clsx(standardClassnames.shiftActions, classNamesProp.value?.shiftActions),
     dragHandle: clsx(standardClassnames.dragHandle, classNamesProp.value?.dragHandle),
-    fields: clsx(classNamesProp.value?.fields),
-    matchMode: clsx(classNamesProp.value?.matchMode),
-    operators: clsx(classNamesProp.value?.operators),
-    value: clsx(classNamesProp.value?.value),
-    valueSource: clsx(standardClassnames.valueSource, classNamesProp.value?.valueSource),
+    fields: clsx(suppressStandardClassnames.value || standardClassnames.fields, classNamesProp.value?.fields),
+    matchMode: clsx(suppressStandardClassnames.value || standardClassnames.matchMode, classNamesProp.value?.matchMode),
+    operators: clsx(suppressStandardClassnames.value || standardClassnames.operators, classNamesProp.value?.operators),
+    value: clsx(suppressStandardClassnames.value || standardClassnames.value, classNamesProp.value?.value),
+    valueSource: clsx(suppressStandardClassnames.value || standardClassnames.valueSource, classNamesProp.value?.valueSource),
     cloneRule: clsx(standardClassnames.cloneRule, classNamesProp.value?.cloneRule),
-    lockRule: clsx(classNamesProp.value?.lockRule),
+    lockRule: clsx(suppressStandardClassnames.value || standardClassnames.lockRule, classNamesProp.value?.lockRule),
     muteRule: clsx(standardClassnames.muteRule, classNamesProp.value?.muteRule),
-    removeRule: clsx(classNamesProp.value?.removeRule),
+    removeRule: clsx(suppressStandardClassnames.value || standardClassnames.removeRule, classNamesProp.value?.removeRule),
   }));
 
   const outerClassName = computed(() =>
@@ -209,5 +220,7 @@ export function useRule(options: UseRulePathOptions) {
     shiftDownDisabled,
     schema: schemaRef,
     translations: computed(() => (contextRef.value as { translations?: { value?: unknown } })?.translations?.value ?? {}),
+    subpropertiesFields,
+    subQueryBuilderProps,
   };
 }

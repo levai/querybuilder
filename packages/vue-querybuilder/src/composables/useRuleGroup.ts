@@ -133,14 +133,14 @@ export function useRuleGroup(options: UseRuleGroupPathOptions) {
     body: clsx(suppressStandardClassnames.value || standardClassnames.body, classNamesProp.value?.body),
     addRule: clsx(standardClassnames.addRule, classNamesProp.value?.addRule),
     addGroup: clsx(standardClassnames.addGroup, classNamesProp.value?.addGroup),
-    combinators: clsx(classNamesProp.value?.combinators),
-    notToggle: clsx(classNamesProp.value?.notToggle),
+    combinators: clsx(suppressStandardClassnames.value || standardClassnames.combinators, classNamesProp.value?.combinators),
+    notToggle: clsx(suppressStandardClassnames.value || standardClassnames.notToggle, classNamesProp.value?.notToggle),
     cloneGroup: clsx(standardClassnames.cloneGroup, classNamesProp.value?.cloneGroup),
-    lockGroup: clsx(classNamesProp.value?.lockGroup),
-    muteGroup: clsx(classNamesProp.value?.muteGroup),
-    removeGroup: clsx(classNamesProp.value?.removeGroup),
+    lockGroup: clsx(suppressStandardClassnames.value || standardClassnames.lockGroup, classNamesProp.value?.lockGroup),
+    muteGroup: clsx(suppressStandardClassnames.value || standardClassnames.muteGroup, classNamesProp.value?.muteGroup),
+    removeGroup: clsx(suppressStandardClassnames.value || standardClassnames.removeGroup, classNamesProp.value?.removeGroup),
     shiftActions: clsx(standardClassnames.shiftActions, classNamesProp.value?.shiftActions),
-    dragHandle: clsx(classNamesProp.value?.dragHandle),
+    dragHandle: clsx(suppressStandardClassnames.value || standardClassnames.dragHandle, classNamesProp.value?.dragHandle),
   }));
 
   const outerClassName = computed(() =>
@@ -156,8 +156,15 @@ export function useRuleGroup(options: UseRuleGroupPathOptions) {
 
   const translations = computed(() => (contextRef.value as { translations?: { value?: RuleGroupProps['translations'] } })?.translations?.value ?? (contextRef.value as { translations?: RuleGroupProps['translations'] })?.translations ?? {});
 
+  const accessibleDescription = computed(() => {
+    const gen = (schemaRef.value as { accessibleDescriptionGenerator?: (opts: { path: Path; qbId: string }) => string })?.accessibleDescriptionGenerator;
+    if (typeof gen !== 'function') return '';
+    return gen({ path: pathRef.value, qbId: (schemaRef.value as { qbId?: string })?.qbId ?? '' });
+  });
+
   return {
     path: pathRef,
+    accessibleDescription,
     parentDisabled,
     parentMuted: parentMuted as unknown as typeof parentDisabled,
     ruleGroup,

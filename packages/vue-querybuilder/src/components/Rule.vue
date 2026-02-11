@@ -9,6 +9,7 @@ import ActionElement from './ActionElement.vue';
 import ShiftActions from './ShiftActions.vue';
 import DragHandle from './DragHandle.vue';
 import MatchModeEditor from './MatchModeEditor.vue';
+import SubQueryWrapper from './SubQueryWrapper.vue';
 
 const props = defineProps<UseRulePathOptions>();
 
@@ -72,6 +73,17 @@ const shiftTitles = computed(() => ({
 }));
 const valueSourceSelectorTitle = computed(() => translationsVal.value?.valueSourceSelector?.title ?? 'Value source');
 const matchModeTitle = computed(() => (translationsVal.value?.matchMode as { title?: string })?.title ?? 'Match mode');
+// React: defaultMatch = { mode: 'all' }; match 为对象 { mode, threshold? }
+const matchValueForEditor = computed(() => {
+  const m = ruleData.value?.match;
+  if (m && typeof m === 'object' && 'mode' in m) return m;
+  const firstMode = matchModesVal.value[0]?.name ?? 'all';
+  return { mode: firstMode, threshold: 1 };
+});
+function onMatchModeChange(v: unknown) {
+  const obj = typeof v === 'string' ? { mode: v, threshold: 1 } : (v as { mode: string; threshold?: number });
+  r.onChangeMatchMode(obj);
+}
 const dragHandleLabel = computed(() => translationsVal.value?.dragHandle?.label ?? '⁞⁞');
 const dragHandleTitle = computed(() => translationsVal.value?.dragHandle?.title ?? 'Drag handle');
 
@@ -130,13 +142,20 @@ function onValueSourceChange(v: string | string[]) {
     />
     <MatchModeEditor
       v-if="showMatchModeEditor"
-      :value="ruleData?.match"
+      :value="matchValueForEditor"
       :options="matchModesVal"
       :test-id="TestID.matchModeEditor"
       :title="matchModeTitle"
       :class-name="classNamesVal.matchMode"
       :disabled="disabledVal"
-      :handle-on-change="(v: unknown) => r.onChangeMatchMode(v)"
+      :handle-on-change="onMatchModeChange"
+    />
+    <SubQueryWrapper
+      v-if="showMatchModeEditor"
+      :model-value="ruleData?.value"
+      :disabled="disabledVal"
+      :sub-fields="(unwrap(r.subpropertiesFields) ?? []) as unknown[]"
+      @update:model-value="(v) => r.onChangeValue(v)"
     />
     <template v-if="!showMatchModeEditor">
       <ValueSelector
