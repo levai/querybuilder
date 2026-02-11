@@ -6,6 +6,8 @@
 import {
   add,
   clsx,
+  convertFromIC,
+  convertToIC,
   findPath,
   generateID,
   getFirstOption,
@@ -221,8 +223,21 @@ export function useQueryBuilderSchema<
 
   const initialQuery = computed(() => {
     const q = queryProp.value ?? defaultQueryProp.value;
-    if (!q) return prepareRuleGroup(createRuleGroup() as RuleGroupTypeAny, { idGenerator }) as RG;
-    return (q.id ? q : prepareRuleGroup(q as RuleGroupTypeAny, { idGenerator })) as RG;
+    if (!q) {
+      const newGroup = prepareRuleGroup(createRuleGroup(props.value.independentCombinators) as RuleGroupTypeAny, { idGenerator }) as RG;
+      return newGroup;
+    }
+    let prepared = (q.id ? q : prepareRuleGroup(q as RuleGroupTypeAny, { idGenerator })) as RG;
+    // 如果指定了 independentCombinators prop，确保 query 格式匹配
+    if (props.value.independentCombinators !== undefined) {
+      const isIC = isRuleGroupTypeIC(prepared);
+      if (props.value.independentCombinators && !isIC) {
+        prepared = convertToIC(prepared) as RG;
+      } else if (!props.value.independentCombinators && isIC) {
+        prepared = convertFromIC(prepared) as RG;
+      }
+    }
+    return prepared;
   });
 
   const queryRef = ref<RG | null>(initialQuery.value) as Ref<RG | null>;
@@ -320,7 +335,33 @@ export function useQueryBuilderSchema<
     dispatchQuery(nextQuery);
   };
 
-  const independentCombinators = computed(() => isRuleGroupTypeIC(rootGroup.value));
+  // 检测 independent combinators：优先使用 prop，否则通过 query 数据结构检测
+  const independentCombinatorsFromQuery = computed(() => isRuleGroupTypeIC(rootGroup.value));
+  const independentCombinatorsProp = computed(() => props.value.independentCombinators);
+  const independentCombinators = computed(() => 
+    independentCombinatorsProp.value !== undefined 
+      ? independentCombinatorsProp.value 
+      : independentCombinatorsFromQuery.value
+  );
+
+  // 当 independentCombinators prop 变化时，转换 query 格式
+  watch(
+    independentCombinatorsProp,
+    (newVal, oldVal) => {
+      if (newVal !== undefined && newVal !== oldVal && queryRef.value) {
+        const currentIsIC = isRuleGroupTypeIC(queryRef.value);
+        if (newVal && !currentIsIC) {
+          // 需要转换为 IC 格式
+          dispatchQuery(convertToIC(queryRef.value));
+        } else if (!newVal && currentIsIC) {
+          // 需要转换为普通格式
+          dispatchQuery(convertFromIC(queryRef.value));
+        }
+      }
+    },
+    { immediate: false }
+  );
+
   const validationResult = computed(() =>
     typeof props.value.validator === 'function' ? props.value.validator(rootGroup.value) : {}
   );
