@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue';
-import type { RuleGroupType, RuleGroupTypeAny, RuleType } from '@react-querybuilder/core';
-import { defaultValidator, generateAccessibleDescription, isRuleGroup } from '@react-querybuilder/core';
+import type { RuleGroupType, RuleGroupTypeAny, RuleType, ExportFormat } from '@react-querybuilder/core';
+import { defaultValidator, generateAccessibleDescription, isRuleGroup, formatQuery } from '@react-querybuilder/core';
 import type { QueryValidator } from '@react-querybuilder/core';
 import { QueryBuilder } from '../src';
 import { fields, initialQuery } from './demoData';
@@ -34,6 +34,77 @@ const demoValidator: QueryValidator = (query: RuleGroupTypeAny) => {
 const query = ref<RuleGroupType>(initialQuery);
 
 const options = reactive({ ...defaultOptions });
+
+// 导出相关状态
+const exportFormat = ref<ExportFormat>('json_without_ids');
+const parseNumbersInExport = ref(false);
+
+// 可用的导出格式（与 React demo 对齐）
+const exportFormats: Array<{ value: ExportFormat; label: string; group?: string }> = [
+  { value: 'json', label: 'JSON', group: 'json' },
+  { value: 'sql', label: 'SQL', group: 'sql' },
+  { value: 'mongodb_query', label: 'MongoDB', group: 'mongodb' },
+  { value: 'cel', label: 'CEL' },
+  { value: 'spel', label: 'SpEL' },
+  { value: 'jsonlogic', label: 'JsonLogic' },
+  { value: 'elasticsearch', label: 'ElasticSearch' },
+  { value: 'prisma', label: 'Prisma ORM' },
+  { value: 'jsonata', label: 'JSONata' },
+  { value: 'ldap', label: 'LDAP' },
+  { value: 'natural_language', label: 'Natural language' },
+];
+
+// JSON 格式的子选项
+const jsonSubFormats: Array<{ value: ExportFormat; label: string }> = [
+  { value: 'json_without_ids', label: 'Without id or path' },
+  { value: 'json', label: 'Full query object' },
+];
+
+// SQL 格式的子选项
+const sqlSubFormats: Array<{ value: ExportFormat; label: string }> = [
+  { value: 'sql', label: 'Inline' },
+  { value: 'parameterized', label: 'Parameterized' },
+  { value: 'parameterized_named', label: 'Named parameters' },
+];
+
+// 需要 JSON.stringify 的格式
+const objectFormats = new Set<ExportFormat>([
+  'jsonlogic',
+  'elasticsearch',
+  'mongodb_query',
+  'parameterized',
+  'parameterized_named',
+]);
+
+// 计算导出结果
+const exportResult = computed(() => {
+  try {
+    const queryForFormatting = query.value;
+    const format = exportFormat.value;
+    
+    const result = formatQuery(queryForFormatting, {
+      format,
+      parseNumbers: parseNumbersInExport.value || undefined,
+      fields: fields as any,
+    });
+
+    // 如果是对象格式，需要 JSON.stringify
+    if (objectFormats.has(format)) {
+      return JSON.stringify(result, null, 2);
+    }
+    
+    // 字符串格式直接返回
+    return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+  } catch (error) {
+    return `Error: ${error instanceof Error ? error.message : String(error)}`;
+  }
+});
+
+// 当前格式组（用于显示子选项）
+const currentFormatGroup = computed(() => {
+  const fmt = exportFormats.find(f => f.value === exportFormat.value);
+  return fmt?.group;
+});
 
 const queryBuilderProps = computed(() => ({
   fields: fields as any,
@@ -133,27 +204,99 @@ function getRulesWithValueTypes() {
       </main>
 
       <aside class="query-display">
-        <h2>Query</h2>
-        <pre>{{ JSON.stringify(query, null, 2) }}</pre>
-        <div v-if="options.listsAsArrays || options.parseNumbers" class="test-hints">
-          <h3>测试提示</h3>
-          <div v-if="options.listsAsArrays" class="test-hint">
-            <strong>Lists as Arrays:</strong> 启用后，多值操作符（between、in、notIn）的值会以数组形式存储。
-            <br />测试：选择 "between" 或 "in" 操作符，查看 value 是否为数组格式。
+        <div class="tab-content">
+          <h2>Query</h2>
+          <pre class="query-preview">{{ JSON.stringify(query, null, 2) }}</pre>
+          <div v-if="options.listsAsArrays || options.parseNumbers" class="test-hints">
+            <h3>测试提示</h3>
+            <div v-if="options.listsAsArrays" class="test-hint">
+              <strong>Lists as Arrays:</strong> 启用后，多值操作符（between、in、notIn）的值会以数组形式存储。
+              <br />测试：选择 "between" 或 "in" 操作符，查看 value 是否为数组格式。
+            </div>
+            <div v-if="options.parseNumbers" class="test-hint">
+              <strong>Parse Numbers:</strong> 启用后，数字输入会被解析为 number 类型。
+              <br />测试：选择 "Age" 字段，输入数字，查看 value 的类型（应为数字而非字符串）。
+            </div>
+            <div class="test-hint-value-types">
+              <strong>当前规则值类型检查：</strong>
+              <ul>
+                <li v-for="(rule, idx) in getRulesWithValueTypes()" :key="idx">
+                  {{ rule.field }} ({{ rule.operator }}): 
+                  <code>{{ rule.valueType }}</code>
+                  <span v-if="rule.isArray"> - 数组</span>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div v-if="options.parseNumbers" class="test-hint">
-            <strong>Parse Numbers:</strong> 启用后，数字输入会被解析为 number 类型。
-            <br />测试：选择 "Age" 字段，输入数字，查看 value 的类型（应为数字而非字符串）。
-          </div>
-          <div class="test-hint-value-types">
-            <strong>当前规则值类型检查：</strong>
-            <ul>
-              <li v-for="(rule, idx) in getRulesWithValueTypes()" :key="idx">
-                {{ rule.field }} ({{ rule.operator }}): 
-                <code>{{ rule.valueType }}</code>
-                <span v-if="rule.isArray"> - 数组</span>
-              </li>
-            </ul>
+
+          <div class="export-section">
+            <h3>Export</h3>
+            <div class="export-tabs">
+              <button
+                v-for="fmt in exportFormats"
+                :key="fmt.value"
+                :class="['export-tab-button', { 
+                  active: fmt.group 
+                    ? (fmt.group === 'json' && (exportFormat === 'json' || exportFormat === 'json_without_ids'))
+                    || (fmt.group === 'sql' && ['sql', 'parameterized', 'parameterized_named'].includes(exportFormat))
+                    || (fmt.group === 'mongodb' && exportFormat === 'mongodb_query')
+                    : exportFormat === fmt.value
+                }]"
+                @click="exportFormat = fmt.value"
+              >
+                {{ fmt.label }}
+              </button>
+            </div>
+            
+            <!-- JSON 格式子选项 -->
+            <div v-if="currentFormatGroup === 'json'" class="export-sub-options">
+              <label
+                v-for="subFmt in jsonSubFormats"
+                :key="subFmt.value"
+                class="sub-option-label"
+              >
+                <input
+                  type="radio"
+                  :value="subFmt.value"
+                  v-model="exportFormat"
+                  name="json-format"
+                />
+                <span>{{ subFmt.label }}</span>
+              </label>
+            </div>
+            
+            <!-- SQL 格式子选项 -->
+            <div v-if="currentFormatGroup === 'sql'" class="export-sub-options">
+              <label
+                v-for="subFmt in sqlSubFormats"
+                :key="subFmt.value"
+                class="sub-option-label"
+              >
+                <input
+                  type="radio"
+                  :value="subFmt.value"
+                  v-model="exportFormat"
+                  name="sql-format"
+                />
+                <span>{{ subFmt.label }}</span>
+              </label>
+            </div>
+            
+            <!-- Parse numbers 选项 -->
+            <div class="export-parse-numbers">
+              <label class="parse-numbers-label">
+                <input
+                  type="checkbox"
+                  v-model="parseNumbersInExport"
+                  :disabled="options.disabled"
+                />
+                <span>Parse numbers</span>
+              </label>
+            </div>
+            
+            <div class="export-preview">
+              <pre>{{ exportResult }}</pre>
+            </div>
           </div>
         </div>
       </aside>
@@ -264,7 +407,7 @@ function getRulesWithValueTypes() {
 }
 
 .query-display {
-  width: 320px;
+  width: 400px;
   flex-shrink: 0;
   min-height: 0;
   padding: 16px;
@@ -276,13 +419,148 @@ function getRulesWithValueTypes() {
   flex-direction: column;
 }
 
-.query-display h2 {
+.tab-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-content h2 {
   margin: 0 0 8px;
   font-size: 1em;
   flex-shrink: 0;
 }
 
-.query-display pre {
+.query-preview {
+  margin: 0 0 16px;
+  flex-shrink: 0;
+  max-height: 300px;
+  background: white;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-y: auto;
+  overflow-x: auto;
+  font-size: 12px;
+}
+
+.export-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ddd;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.export-section h3 {
+  margin: 0 0 8px;
+  font-size: 0.95em;
+  color: #2387c4;
+}
+
+.export-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ddd;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.export-tab-button {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  font-size: 11px;
+  color: #666;
+  border-radius: 3px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.export-tab-button:hover {
+  background: #f0f0f0;
+  border-color: #2387c4;
+}
+
+.export-tab-button.active {
+  color: #2387c4;
+  border-color: #2387c4;
+  background: #e3f2fd;
+  font-weight: 500;
+}
+
+.export-sub-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.sub-option-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sub-option-label input[type="radio"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.sub-option-label span {
+  user-select: none;
+}
+
+.export-parse-numbers {
+  margin-bottom: 8px;
+  padding: 8px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.parse-numbers-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.parse-numbers-label input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.parse-numbers-label input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.parse-numbers-label span {
+  user-select: none;
+}
+
+.export-preview {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.export-preview pre {
   margin: 0;
   flex: 1;
   min-height: 0;
