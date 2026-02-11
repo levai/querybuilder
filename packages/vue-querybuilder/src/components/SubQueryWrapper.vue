@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // @ts-nocheck - sub context schema/actions typing
-import { ref, watch, computed, inject, provide } from 'vue';
+import { ref, watch, computed, inject, provide, toRaw } from 'vue';
 import {
   add,
   remove,
@@ -135,29 +135,35 @@ const subActions = computed(() => {
     onRuleAdd(rule: RuleType, parentPath: Path) {
       const g = subQueryRef.value;
       if (!g) return;
-      const newGroup = add(g, rule, parentPath, { combinators, idGenerator: generateID });
+      // 使用 toRaw 去掉响应式代理，core 函数内部会用 Immer 创建新对象
+      const rawG = toRaw(g);
+      const newGroup = add(rawG, rule, parentPath, { combinators, idGenerator: generateID });
       subDispatch(newGroup);
     },
     onGroupAdd(ruleGroup: RuleGroupTypeAny, parentPath: Path) {
       const g = subQueryRef.value;
       if (!g) return;
-      const newGroup = add(g, ruleGroup, parentPath, { combinators, idGenerator: generateID });
+      const rawG = toRaw(g);
+      const newGroup = add(rawG, ruleGroup, parentPath, { combinators, idGenerator: generateID });
       subDispatch(newGroup);
     },
     onGroupRemove(path: Path) {
       const g = subQueryRef.value;
       if (!g) return;
-      subDispatch(remove(g, path));
+      const rawG = toRaw(g);
+      subDispatch(remove(rawG, path));
     },
     onRuleRemove(path: Path) {
       const g = subQueryRef.value;
       if (!g) return;
-      subDispatch(remove(g, path));
+      const rawG = toRaw(g);
+      subDispatch(remove(rawG, path));
     },
     onPropChange(prop: string, value: unknown, path: Path) {
       const g = subQueryRef.value;
       if (!g) return;
-      const newGroup = update(g, prop, value, path, {
+      const rawG = toRaw(g);
+      const newGroup = update(rawG, prop, value, path, {
         resetOnFieldChange: true,
         resetOnOperatorChange: false,
         getRuleDefaultOperator: schema?.getRuleDefaultOperator ?? (() => '='),
@@ -170,7 +176,8 @@ const subActions = computed(() => {
     moveRule(oldPath: Path, newPath: Path | 'up' | 'down', clone?: boolean) {
       const g = subQueryRef.value;
       if (!g) return;
-      subDispatch(move(g, oldPath, newPath, { clone, combinators, idGenerator: generateID }));
+      const rawG = toRaw(g);
+      subDispatch(move(rawG, oldPath, newPath, { clone, combinators, idGenerator: generateID }));
     },
     groupRule: () => {},
   };
