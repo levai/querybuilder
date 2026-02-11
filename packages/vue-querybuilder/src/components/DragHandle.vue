@@ -5,11 +5,12 @@ defineProps<{
   title?: string;
   className?: string;
   disabled?: boolean;
+  testId?: string;
 }>();
 </script>
 
 <template>
-  <span :class="className" :title="title" :aria-disabled="disabled">
+  <span :class="className" :title="title" :aria-disabled="disabled" :data-testid="testId">
     {{ label ?? '⋮⋮' }}
   </span>
 </template>

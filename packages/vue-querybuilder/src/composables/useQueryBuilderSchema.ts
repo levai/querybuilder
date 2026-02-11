@@ -179,7 +179,10 @@ export function useQueryBuilderSchema<
     if (vals.length > 0) {
       const editorType = getValueEditorTypeMain(r.field, r.operator, { fieldData });
       if (editorType === 'checkbox') return false;
-      return getFirstOption(vals);
+      const first = getFirstOption(vals);
+      const valuePlaceholder =
+        (translations.value.values as { placeholderName?: string })?.placeholderName ?? '~';
+      return first === valuePlaceholder || first == null ? '' : first;
     }
     return '';
   };

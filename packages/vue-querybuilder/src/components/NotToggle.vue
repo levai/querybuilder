@@ -6,6 +6,7 @@ const props = defineProps<{
   className?: string;
   disabled?: boolean;
   handleOnChange?: (checked: boolean) => void;
+  testId?: string;
 }>();
 
 function onChange(e: Event) {
@@ -15,7 +16,7 @@ function onChange(e: Event) {
 </script>
 
 <template>
-  <label :class="className" :title="title">
+  <label :class="className" :title="title" :data-testid="testId">
     <input
       type="checkbox"
       :checked="checked"

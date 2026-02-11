@@ -7,6 +7,7 @@ const props = defineProps<{
   className?: string;
   disabled?: boolean;
   handleOnChange?: (value: unknown) => void;
+  testId?: string;
 }>();
 
 const selectValue = computed(() => {
@@ -26,6 +27,7 @@ function onSelectChange(e: Event) {
     :value="selectValue"
     :class="className"
     :disabled="disabled"
+    :data-testid="testId"
     @change="onSelectChange"
   >
     <option v-for="opt in options" :key="opt.name" :value="opt.name">{{ opt.label }}</option>

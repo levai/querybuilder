@@ -8,11 +8,12 @@ defineProps<{
   titles?: { shiftUp?: string; shiftDown?: string };
   className?: string;
   disabled?: boolean;
+  testId?: string;
 }>();
 </script>
 
 <template>
-  <span v-if="shiftUp || shiftDown" :class="className">
+  <span v-if="shiftUp || shiftDown" :class="className" :data-testid="testId">
     <button
       v-if="shiftUp"
       type="button"

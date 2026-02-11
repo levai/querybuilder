@@ -8,6 +8,7 @@ import ValueEditor from './ValueEditor.vue';
 import ActionElement from './ActionElement.vue';
 import ShiftActions from './ShiftActions.vue';
 import DragHandle from './DragHandle.vue';
+import MatchModeEditor from './MatchModeEditor.vue';
 
 const props = defineProps<UseRulePathOptions>();
 
@@ -30,6 +31,7 @@ const operatorsVal = computed(() => (unwrap(r.operators) ?? []) as { name: strin
 const valuesVal = computed(() => (unwrap(r.values) ?? []) as Array<{ name: string; label: string }> | Array<{ type: 'optgroup'; label: string; options: Array<{ name: string; label: string }> }>);
 const valueEditorTypeVal = computed(() => (unwrap(r.valueEditorType) ?? 'text') as string);
 const inputTypeVal = computed(() => (unwrap(r.inputType) ?? 'text') as string);
+const valueEditorSeparatorVal = computed(() => unwrap(r.valueEditorSeparator) as string | null | undefined);
 const hideValueControlsVal = computed(() => !!unwrap(r.hideValueControls));
 const showLockButtons = computed(() => !!schemaVal.value?.showLockButtons);
 const showShiftActions = computed(() => !!schemaVal.value?.showShiftActions);
@@ -39,6 +41,13 @@ const showMuteButtons = computed(() => !!schemaVal.value?.showMuteButtons);
 const fieldsList = computed(() => (schemaVal.value?.fields ?? []) as { name: string; label: string }[]);
 const valueSourceOptionsVal = computed(() => (unwrap(r.valueSourceOptions) ?? []) as Array<{ name: string; value?: string; label: string }>);
 const valueSourcesVal = computed(() => (unwrap(r.valueSources) ?? []) as string[]);
+const matchModesVal = computed(() => (unwrap(r.matchModes) ?? []) as Array<{ name: string; label: string }>);
+const fieldsPlaceholderName = computed(() => (translationsVal.value?.fields as { placeholderName?: string })?.placeholderName ?? '');
+const showMatchModeEditor = computed(() => {
+  const auto = !!schemaVal.value?.autoSelectField;
+  const fieldSelected = ruleData.value?.field !== fieldsPlaceholderName.value;
+  return (auto || fieldSelected) && matchModesVal.value.length > 0;
+});
 const showValueSourceSelector = computed(() => {
   const op = (ruleData.value?.operator ?? '').toString().toLowerCase();
   return !['null', 'notnull'].includes(op) && valueSourcesVal.value.length > 1 && !hideValueControlsVal.value;
@@ -62,6 +71,7 @@ const shiftTitles = computed(() => ({
   shiftDown: translationsVal.value?.shiftActionDown?.title ?? 'Shift down',
 }));
 const valueSourceSelectorTitle = computed(() => translationsVal.value?.valueSourceSelector?.title ?? 'Value source');
+const matchModeTitle = computed(() => (translationsVal.value?.matchMode as { title?: string })?.title ?? 'Match mode');
 const dragHandleLabel = computed(() => translationsVal.value?.dragHandle?.label ?? '⁞⁞');
 const dragHandleTitle = computed(() => translationsVal.value?.dragHandle?.title ?? 'Drag handle');
 
@@ -91,6 +101,7 @@ function onValueSourceChange(v: string | string[]) {
   >
     <ShiftActions
       v-if="showShiftActions"
+      :test-id="TestID.shiftActions"
       :shift-up="r.shiftRuleUp"
       :shift-down="r.shiftRuleDown"
       :shift-up-disabled="unwrap(r.shiftUpDisabled)"
@@ -102,6 +113,7 @@ function onValueSourceChange(v: string | string[]) {
     />
     <DragHandle
       v-if="enableDragAndDrop"
+      :test-id="TestID.dragHandle"
       :label="dragHandleLabel"
       :title="dragHandleTitle"
       :class-name="classNamesVal.dragHandle"
@@ -110,41 +122,62 @@ function onValueSourceChange(v: string | string[]) {
     <ValueSelector
       :value="ruleData?.field"
       :options="fieldsList"
+      :test-id="TestID.fields"
       title="Field"
       :disabled="disabledVal"
       :class-name="classNamesVal.fields"
       :handle-on-change="onFieldChange"
     />
-    <ValueSelector
-      :value="ruleData?.operator"
-      :options="operatorsVal"
-      title="Operator"
+    <MatchModeEditor
+      v-if="showMatchModeEditor"
+      :value="ruleData?.match"
+      :options="matchModesVal"
+      :test-id="TestID.matchModeEditor"
+      :title="matchModeTitle"
+      :class-name="classNamesVal.matchMode"
       :disabled="disabledVal"
-      :class-name="classNamesVal.operators"
-      :handle-on-change="onOperatorChange"
+      :handle-on-change="(v: unknown) => r.onChangeMatchMode(v)"
     />
-    <ValueSelector
-      v-if="showValueSourceSelector"
-      :value="ruleData?.valueSource ?? 'value'"
-      :options="valueSourceOptionsVal"
-      :title="valueSourceSelectorTitle"
-      :disabled="disabledVal"
-      :class-name="classNamesVal.valueSource"
-      :handle-on-change="onValueSourceChange"
-    />
-    <ValueEditor
-      v-if="!hideValueControlsVal"
-      :value="ruleData?.value"
-      :type="valueEditorTypeVal"
-      :input-type="inputTypeVal"
-      :disabled="disabledVal"
-      :class-name="classNamesVal.value"
-      :values="valuesVal"
-      :multiple="valueEditorTypeVal === 'multiselect'"
-      :handle-on-change="(v: unknown) => r.onChangeValue(v)"
-    />
+    <template v-if="!showMatchModeEditor">
+      <ValueSelector
+        :value="ruleData?.operator"
+        :options="operatorsVal"
+        :test-id="TestID.operators"
+        title="Operator"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.operators"
+        :handle-on-change="onOperatorChange"
+      />
+      <ValueSelector
+        v-if="showValueSourceSelector"
+        :value="ruleData?.valueSource ?? 'value'"
+        :options="valueSourceOptionsVal"
+        :test-id="TestID.valueSourceSelector"
+        :title="valueSourceSelectorTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.valueSource"
+        :handle-on-change="onValueSourceChange"
+      />
+      <ValueEditor
+        v-if="!hideValueControlsVal"
+        :value="ruleData?.value"
+        :type="valueEditorTypeVal"
+        :input-type="inputTypeVal"
+        :operator="(ruleData?.operator ?? '') as string"
+        :separator="valueEditorSeparatorVal"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.value"
+        :values="valuesVal"
+        :multiple="valueEditorTypeVal === 'multiselect'"
+        :test-id="TestID.valueEditor"
+        :parse-numbers="!!schemaVal?.parseNumbers"
+        :lists-as-arrays="!!schemaVal?.listsAsArrays"
+        :handle-on-change="(v: unknown) => r.onChangeValue(v)"
+      />
+    </template>
     <ActionElement
       v-if="showCloneButtons"
+      :test-id="TestID.cloneRule"
       :label="cloneRuleLabel"
       :title="cloneRuleTitle"
       :disabled="disabledVal"
@@ -153,6 +186,7 @@ function onValueSourceChange(v: string | string[]) {
     />
     <ActionElement
       v-if="showLockButtons"
+      :test-id="TestID.lockRule"
       :label="lockRuleLabel"
       :title="lockRuleTitle"
       :disabled="parentDisabledVal"
@@ -161,6 +195,7 @@ function onValueSourceChange(v: string | string[]) {
     />
     <ActionElement
       v-if="showMuteButtons"
+      :test-id="TestID.muteRule"
       :label="muteRuleLabel"
       :title="muteRuleTitle"
       :disabled="disabledVal"
@@ -168,6 +203,7 @@ function onValueSourceChange(v: string | string[]) {
       :handle-on-click="toggleMuteRuleFn"
     />
     <ActionElement
+      :test-id="TestID.removeRule"
       :label="removeRuleLabel"
       :title="removeRuleTitle"
       :disabled="disabledVal"

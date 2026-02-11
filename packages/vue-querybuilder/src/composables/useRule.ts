@@ -84,6 +84,10 @@ export function useRule(options: UseRulePathOptions) {
     const getIt = schemaRef.value?.getInputType ?? (() => 'text');
     return getIt(rule.value?.field ?? '', rule.value?.operator ?? '', { fieldData: fieldData.value });
   });
+  const valueEditorSeparator = computed(() => {
+    const getSep = schemaRef.value?.getValueEditorSeparator ?? (() => null);
+    return getSep(rule.value?.field ?? '', rule.value?.operator ?? '', { fieldData: fieldData.value });
+  });
   const hideValueControls = computed(() => {
     const ops = operators.value;
     const op = Array.isArray(ops)
@@ -103,6 +107,11 @@ export function useRule(options: UseRulePathOptions) {
   });
   const valueSources = computed(() => valueSourceOptions.value.map((o: { value?: string }) => o?.value ?? o?.name) as string[]);
 
+  const matchModes = computed(() => {
+    const getM = schemaRef.value?.getMatchModes ?? (() => []);
+    return getM(rule.value?.field ?? '', { fieldData: fieldData.value });
+  });
+
   const onPropChange = (prop: string, value: unknown, path: Path, context?: unknown) => {
     const allow = !disabled.value || prop === 'disabled' || prop === 'muted';
     if (allow) (actionsRef.value as { onPropChange?: (p: string, v: unknown, path: Path, ctx?: unknown) => void })?.onPropChange?.(prop, value, path, context);
@@ -119,6 +128,7 @@ export function useRule(options: UseRulePathOptions) {
   const onChangeOperator = (v: unknown, ctx?: unknown) => getChangeHandler('operator')(v, ctx);
   const onChangeValue = (v: unknown, ctx?: unknown) => getChangeHandler('value')(v, ctx);
   const onChangeValueSource = (v: unknown, ctx?: unknown) => getChangeHandler('valueSource')(v, ctx);
+  const onChangeMatchMode = (v: unknown, ctx?: unknown) => getChangeHandler('match')(v, ctx);
 
   const toggleLockRule = () => onPropChange('disabled', !disabled.value, pathRef.value);
   const toggleMuteRule = () => onPropChange('muted', !rule.value?.muted, pathRef.value);
@@ -143,6 +153,7 @@ export function useRule(options: UseRulePathOptions) {
     shiftActions: clsx(standardClassnames.shiftActions, classNamesProp.value?.shiftActions),
     dragHandle: clsx(standardClassnames.dragHandle, classNamesProp.value?.dragHandle),
     fields: clsx(classNamesProp.value?.fields),
+    matchMode: clsx(classNamesProp.value?.matchMode),
     operators: clsx(classNamesProp.value?.operators),
     value: clsx(classNamesProp.value?.value),
     valueSource: clsx(standardClassnames.valueSource, classNamesProp.value?.valueSource),
@@ -178,13 +189,16 @@ export function useRule(options: UseRulePathOptions) {
     values,
     valueEditorType,
     inputType,
+    valueEditorSeparator,
     hideValueControls,
     valueSourceOptions,
     valueSources,
+    matchModes,
     onChangeField,
     onChangeOperator,
     onChangeValue,
     onChangeValueSource,
+    onChangeMatchMode,
     toggleLockRule,
     toggleMuteRule,
     removeRule,

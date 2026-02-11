@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import { isRuleGroup, pathsAreEqual } from '@react-querybuilder/core';
+import { isRuleGroup, pathsAreEqual, TestID } from '@react-querybuilder/core';
 import type { RuleGroupTypeAny, RuleType } from '@react-querybuilder/core';
 import { useRuleGroup, type UseRuleGroupPathOptions } from '../composables/useRuleGroup';
 import { QUERY_BUILDER_CONTEXT_KEY } from '../context/queryBuilderContext';
@@ -10,11 +10,12 @@ import NotToggle from './NotToggle.vue';
 import ActionElement from './ActionElement.vue';
 import ShiftActions from './ShiftActions.vue';
 import DragHandle from './DragHandle.vue';
+import InlineCombinator from './InlineCombinator.vue';
 
 const props = defineProps<UseRuleGroupPathOptions>();
 
 const ctx = inject(QUERY_BUILDER_CONTEXT_KEY);
-const schemaVal = computed(() => (ctx?.value as { schema?: { value?: { showNotToggle?: boolean; showShiftActions?: boolean; enableDragAndDrop?: boolean; showCloneButtons?: boolean; showMuteButtons?: boolean; controls?: unknown } } })?.schema?.value);
+const schemaVal = computed(() => (ctx?.value as { schema?: { value?: { showNotToggle?: boolean; showShiftActions?: boolean; enableDragAndDrop?: boolean; showCloneButtons?: boolean; showMuteButtons?: boolean; showCombinatorsBetweenRules?: boolean; independentCombinators?: boolean; controls?: unknown } } })?.schema?.value);
 const translationsVal = computed(() => (ctx?.value as { translations?: { value?: Record<string, unknown> } })?.translations?.value ?? {});
 
 const r = useRuleGroup(props);
@@ -37,7 +38,9 @@ const schemaUnwrapped = computed(() => {
   const s = (r.schema as { value?: { combinators?: unknown[]; showLockButtons?: boolean; controls?: { ruleGroup?: unknown } } })?.value ?? r.schema;
   return s ?? {};
 });
-const schemaValForControls = computed(() => schemaUnwrapped.value as { controls?: { ruleGroup?: unknown }; combinators?: unknown[]; showLockButtons?: boolean } | undefined);
+const schemaValForControls = computed(() => schemaUnwrapped.value as { controls?: { ruleGroup?: unknown }; combinators?: unknown[]; showLockButtons?: boolean; showCombinatorsBetweenRules?: boolean; independentCombinators?: boolean } | undefined);
+const showCombinatorsBetweenRulesVal = computed(() => !!schemaValForControls.value?.showCombinatorsBetweenRules);
+const independentCombinatorsVal = computed(() => !!schemaValForControls.value?.independentCombinators);
 const RuleGroupRecursive = computed(() => schemaValForControls.value?.controls?.ruleGroup);
 const combinatorsList = computed(() => (schemaValForControls.value?.combinators ?? []) as { name: string; label: string }[]);
 const showLockButtonsVal = computed(() => !!schemaValForControls.value?.showLockButtons);
@@ -88,10 +91,11 @@ function shiftDownDisabledAt(idx: number) {
 </script>
 
 <template>
-  <div :class="outerClass" data-testid="rule-group" :data-rule-group-id="groupId">
+  <div :class="outerClass" :data-testid="TestID.ruleGroup" :data-rule-group-id="groupId">
     <div :class="classNamesVal.header">
       <ShiftActions
         v-if="showShiftActionsVal"
+        :test-id="TestID.shiftActions"
         :shift-up="r.shiftGroupUp"
         :shift-down="r.shiftGroupDown"
         :shift-up-disabled="unwrapRef(r.shiftUpDisabled)"
@@ -103,6 +107,7 @@ function shiftDownDisabledAt(idx: number) {
       />
       <DragHandle
         v-if="enableDragAndDropVal"
+        :test-id="TestID.dragHandle"
         :label="dragHandleLabel"
         :title="dragHandleTitle"
         :class-name="classNamesVal.dragHandle"
@@ -112,17 +117,20 @@ function shiftDownDisabledAt(idx: number) {
         v-if="combinatorVal !== undefined"
         :value="combinatorVal"
         :options="combinatorsList"
+        :test-id="TestID.combinators"
         :title="combinatorTitle"
         :disabled="disabledVal"
         :handle-on-change="(v: string | string[]) => r.onCombinatorChange(Array.isArray(v) ? v[0] : v)"
       />
       <NotToggle
         v-if="schemaVal?.showNotToggle"
+        :test-id="TestID.notToggle"
         :checked="!!ruleGroupVal?.not"
         :disabled="disabledVal"
         :handle-on-change="r.onNotToggleChange"
       />
       <ActionElement
+        :test-id="TestID.addRule"
         :label="addRuleLabel"
         :title="addRuleTitle"
         :disabled="disabledVal"
@@ -130,6 +138,7 @@ function shiftDownDisabledAt(idx: number) {
         :handle-on-click="r.addRule"
       />
       <ActionElement
+        :test-id="TestID.addGroup"
         :label="addGroupLabel"
         :title="addGroupTitle"
         :disabled="disabledVal"
@@ -138,6 +147,7 @@ function shiftDownDisabledAt(idx: number) {
       />
       <ActionElement
         v-if="showCloneButtonsVal"
+        :test-id="TestID.cloneGroup"
         :label="cloneGroupLabel"
         :title="cloneGroupTitle"
         :disabled="disabledVal"
@@ -146,6 +156,7 @@ function shiftDownDisabledAt(idx: number) {
       />
       <ActionElement
         v-if="showLockButtonsVal"
+        :test-id="TestID.lockGroup"
         :label="lockLabel"
         :title="lockTitle"
         :disabled="parentDisabledVal"
@@ -154,6 +165,7 @@ function shiftDownDisabledAt(idx: number) {
       />
       <ActionElement
         v-if="showMuteButtonsVal"
+        :test-id="TestID.muteGroup"
         :label="muteGroupLabel"
         :title="muteGroupTitle"
         :disabled="disabledVal"
@@ -162,6 +174,7 @@ function shiftDownDisabledAt(idx: number) {
       />
       <ActionElement
         v-if="props.path.length > 0"
+        :test-id="TestID.removeGroup"
         :label="removeGroupLabel"
         :title="removeGroupTitle"
         :disabled="disabledVal"
@@ -171,8 +184,29 @@ function shiftDownDisabledAt(idx: number) {
     </div>
     <div :class="classNamesVal.body">
       <template v-for="(child, idx) in rulesArray" :key="childKey(child, idx)">
+        <template v-if="!independentCombinatorsVal && showCombinatorsBetweenRulesVal && idx > 0">
+          <InlineCombinator
+            :value="combinatorVal"
+            :options="combinatorsList"
+            :test-id="TestID.inlineCombinator"
+            :title="combinatorTitle"
+            :class-name="classNamesVal.combinators"
+            :disabled="disabledVal"
+            :handle-on-change="(v: string) => r.onCombinatorChange(v)"
+          />
+        </template>
+        <InlineCombinator
+          v-if="typeof child === 'string'"
+          :value="child"
+          :options="combinatorsList"
+          :test-id="TestID.inlineCombinator"
+          :title="combinatorTitle"
+          :class-name="classNamesVal.combinators"
+          :disabled="disabledAt(idx)"
+          :handle-on-change="(v: string) => r.onIndependentCombinatorChange(v, idx)"
+        />
         <component
-          v-if="isRuleGroup(child)"
+          v-else-if="isRuleGroup(child)"
           :is="RuleGroupRecursive"
           :path="pathAt(idx)"
           :disabled="disabledAt(idx)"

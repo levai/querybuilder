@@ -110,6 +110,9 @@ export function useRuleGroup(options: UseRuleGroupPathOptions) {
     }
   };
   const onCombinatorChange = (value: string) => onPropChange('combinator', value, pathRef.value);
+  const onIndependentCombinatorChange = (value: string, index: number) => {
+    if (!disabled.value) onPropChange('combinator', value, [...pathRef.value, index]);
+  };
   const onNotToggleChange = (checked: boolean) => onPropChange('not', checked, pathRef.value);
   const toggleLockGroup = () => onPropChange('disabled', !disabled.value, pathRef.value);
   const toggleMuteGroup = () => onPropChange('muted', !ruleGroup.value?.muted, pathRef.value);
@@ -171,6 +174,7 @@ export function useRuleGroup(options: UseRuleGroupPathOptions) {
     addGroup,
     removeGroup,
     onCombinatorChange,
+    onIndependentCombinatorChange,
     onNotToggleChange,
     toggleLockGroup,
     toggleMuteGroup,

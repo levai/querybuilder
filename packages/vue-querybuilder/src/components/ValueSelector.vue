@@ -14,6 +14,7 @@ const props = defineProps<{
   disabled?: boolean;
   multiple?: boolean;
   handleOnChange?: (value: string | string[]) => void;
+  testId?: string;
 }>();
 
 const selectValue = computed(() =>
@@ -42,6 +43,7 @@ function onChange(e: Event) {
     :class="className"
     :disabled="disabled"
     :multiple="multiple"
+    :data-testid="testId"
     @change="onChange"
   >
     <template v-for="(opt, i) in (options ?? [])" :key="i">
