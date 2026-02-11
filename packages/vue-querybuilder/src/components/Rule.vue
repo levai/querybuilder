@@ -46,14 +46,21 @@ const valueSourceOptionsVal = computed(() => (unwrap(r.valueSourceOptions) ?? []
 const valueSourcesVal = computed(() => (unwrap(r.valueSources) ?? []) as string[]);
 const matchModesVal = computed(() => (unwrap(r.matchModes) ?? []) as Array<{ name: string; label: string }>);
 const fieldsPlaceholderName = computed(() => (translationsVal.value?.fields as { placeholderName?: string })?.placeholderName ?? '');
+const operatorsPlaceholderName = computed(() => (translationsVal.value?.operators as { placeholderName?: string })?.placeholderName ?? '');
 const showMatchModeEditor = computed(() => {
   const auto = !!schemaVal.value?.autoSelectField;
   const fieldSelected = ruleData.value?.field !== fieldsPlaceholderName.value;
   return (auto || fieldSelected) && matchModesVal.value.length > 0;
 });
+// 与 React 版本一致：当 autoSelectOperator 为 false 且 operator 是 placeholder 时，不显示 ValueEditor 和 ValueSourceSelector
+const showValueControls = computed(() => {
+  const autoSelectOperator = !!schemaVal.value?.autoSelectOperator;
+  const operatorIsPlaceholder = ruleData.value?.operator === operatorsPlaceholderName.value;
+  return (autoSelectOperator || !operatorIsPlaceholder) && !hideValueControlsVal.value;
+});
 const showValueSourceSelector = computed(() => {
   const op = (ruleData.value?.operator ?? '').toString().toLowerCase();
-  return !['null', 'notnull'].includes(op) && valueSourcesVal.value.length > 1 && !hideValueControlsVal.value;
+  return !['null', 'notnull'].includes(op) && valueSourcesVal.value.length > 1 && showValueControls.value;
 });
 
 const translationsVal = computed(() => (unwrap(r.translations) ?? {}) as Record<string, { label?: string; title?: string } | undefined>);
@@ -198,7 +205,9 @@ function onValueSourceChange(v: string | string[]) {
       <SubQueryBody :disabled="disabledVal" :parent-disabled="disabledVal" />
     </SubQueryWrapper>
     <template v-if="!showMatchModeEditor">
+      <!-- 与 React 版本一致：当 autoSelectField 为 false 且 field 是 placeholder 时，不显示 operator selector -->
       <ValueSelector
+        v-if="schemaVal.value?.autoSelectField || ruleData?.field !== fieldsPlaceholderName"
         :value="ruleData?.operator"
         :options="operatorsVal"
         :test-id="TestID.operators"
@@ -218,7 +227,7 @@ function onValueSourceChange(v: string | string[]) {
         :handle-on-change="onValueSourceChange"
       />
       <ValueEditor
-        v-if="!hideValueControlsVal"
+        v-if="showValueControls"
         :value="ruleData?.value"
         :type="valueEditorTypeVal"
         :input-type="inputTypeVal"

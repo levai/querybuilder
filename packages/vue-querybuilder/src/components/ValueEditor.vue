@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import { toArray, joinWith } from '@react-querybuilder/core';
+import { toArray, joinWith, getFirstOption } from '@react-querybuilder/core';
+import type { OptionList } from '@react-querybuilder/core';
 import { toOptions } from '../utils';
 import ValueSelector from './ValueSelector.vue';
 
@@ -27,7 +28,7 @@ const props = withDefaults(
   { type: 'text', multiple: false, parseNumbers: false, listsAsArrays: false, operator: '', separator: null }
 );
 
-const optionsForSelect = computed(() => toOptions(props.values as import('@react-querybuilder/core').OptionList) ?? []);
+const optionsForSelect = computed(() => toOptions(props.values as OptionList) ?? []);
 
 const optionsFlatForRadio = computed(() =>
   optionsForSelect.value.flatMap((o: { type?: string; value?: string; label?: string; options?: Array<{ value?: string; label?: string }> }) =>
@@ -37,9 +38,16 @@ const optionsFlatForRadio = computed(() =>
 
 const valueAsArray = computed(() => toArray(props.value, { retainEmptyStrings: true }));
 
-const valueForSelector = computed((): string | string[] | null => {
+const valueForSelector = computed((): string | string[] | null | undefined => {
   const v = props.value;
-  if (v == null) return null;
+  // 当 value 为空时，返回第一个选项的 value（placeholder name），这样 select 会显示 placeholder 选项
+  // 与 React 版本一致：当 value 为空时，select 会显示第一个选项（placeholder）
+  if (v == null) {
+    // 获取第一个选项的 value（当 autoSelectValue 为 false 时，第一个选项是 placeholder）
+    const firstOpt = getFirstOption(props.values as OptionList);
+    // 确保返回字符串，而不是 null/undefined
+    return firstOpt != null ? String(firstOpt) : '~';
+  }
   if (Array.isArray(v)) return v as string[];
   return String(v);
 });
@@ -69,10 +77,10 @@ const isBetween = computed(() => {
 
 const showBetweenInputs = computed(() => isBetween.value && (props.type === 'text' || props.type === 'select'));
 
+// 使用核心包的 getFirstOption 获取第一个选项的 name
 const firstOptionName = computed(() => {
-  const opts = props.values;
-  if (Array.isArray(opts) && opts[0] && typeof opts[0] === 'object' && 'name' in opts[0]) return (opts[0] as { name: string }).name;
-  return '';
+  const firstOpt = getFirstOption(props.values as OptionList);
+  return firstOpt != null ? String(firstOpt) : '';
 });
 
 // 操作符从 between/in/notIn 切走时，value 收束为单值（与 React useValueEditor useEffect 完全一致）
