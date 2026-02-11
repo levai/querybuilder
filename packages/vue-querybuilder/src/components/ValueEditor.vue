@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { toArray, joinWith } from '@react-querybuilder/core';
 import { toOptions } from '../utils';
 import ValueSelector from './ValueSelector.vue';
@@ -64,6 +64,26 @@ const firstOptionName = computed(() => {
   if (Array.isArray(opts) && opts[0] && typeof opts[0] === 'object' && 'name' in opts[0]) return (opts[0] as { name: string }).name;
   return '';
 });
+
+// 操作符从 between/in/notIn 切走时，value 收束为单值（与 React useValueEditor useEffect 完全一致）
+watch(
+  () => [props.operator, props.value, props.inputType, props.type] as const,
+  () => {
+    if (!props.handleOnChange) return;
+    if (props.type === 'multiselect') return;
+    // 如果当前操作符是多值操作符，不需要收束
+    if (['between', 'notBetween', 'in', 'notIn'].includes(props.operator ?? '')) return;
+    // 检查 value 是否需要收束（与 React 完全一致）
+    const v = props.value;
+    const isArray = Array.isArray(v);
+    const isNumberComma = props.inputType === 'number' && typeof v === 'string' && (v as string).includes(',');
+    if (isArray || isNumberComma) {
+      const first = toArray(v, { retainEmptyStrings: true })[0] ?? '';
+      props.handleOnChange(first);
+    }
+  },
+  { flush: 'post' }
+);
 
 function multiValueHandler(val: unknown, idx: number) {
   const arr = [...valueAsArray.value];
