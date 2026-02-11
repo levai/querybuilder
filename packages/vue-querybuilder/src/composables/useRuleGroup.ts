@@ -25,6 +25,8 @@ export interface UseRuleGroupPathOptions {
   parentMuted?: boolean;
   shiftUpDisabled?: boolean;
   shiftDownDisabled?: boolean;
+  /** 为 true 时仅渲染 header + body 两个 div，不包一层 ruleGroup 根（用于子 query 与 React 一致） */
+  noRootWrapper?: boolean;
   context?: unknown;
 }
 

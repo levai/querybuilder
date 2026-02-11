@@ -174,10 +174,13 @@ export function useRule(options: UseRulePathOptions) {
     removeRule: clsx(suppressStandardClassnames.value || standardClassnames.removeRule, classNamesProp.value?.removeRule),
   }));
 
+  const hasSubQuery = computed(() => (matchModes.value?.length ?? 0) > 0);
   const outerClassName = computed(() =>
     clsx(
       rule.value ? getRuleClassnameFn.value(rule.value as RuleType, { fieldData: fieldData.value }) : '',
       suppressStandardClassnames.value || standardClassnames.rule,
+      hasSubQuery.value && (suppressStandardClassnames.value || standardClassnames.hasSubQuery),
+      hasSubQuery.value && classNamesProp.value?.hasSubQuery,
       classNamesProp.value?.rule,
       disabled.value && classNamesProp.value?.disabled,
       muted.value && classNamesProp.value?.muted,

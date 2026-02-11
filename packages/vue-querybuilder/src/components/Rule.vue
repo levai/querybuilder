@@ -10,6 +10,8 @@ import ShiftActions from './ShiftActions.vue';
 import DragHandle from './DragHandle.vue';
 import MatchModeEditor from './MatchModeEditor.vue';
 import SubQueryWrapper from './SubQueryWrapper.vue';
+import SubQueryHeader from './SubQueryHeader.vue';
+import SubQueryBody from './SubQueryBody.vue';
 
 const props = defineProps<UseRulePathOptions>();
 
@@ -156,7 +158,45 @@ function onValueSourceChange(v: string | string[]) {
       :disabled="disabledVal"
       :sub-fields="(unwrap(r.subpropertiesFields) ?? []) as unknown[]"
       @update:model-value="(v) => r.onChangeValue(v)"
-    />
+    >
+      <SubQueryHeader :disabled="disabledVal" :parent-disabled="disabledVal" />
+      <ActionElement
+        v-if="showCloneButtons"
+        :test-id="TestID.cloneRule"
+        :label="cloneRuleLabel"
+        :title="cloneRuleTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.cloneRule"
+        :handle-on-click="cloneRuleFn"
+      />
+      <ActionElement
+        v-if="showLockButtons"
+        :test-id="TestID.lockRule"
+        :label="lockRuleLabel"
+        :title="lockRuleTitle"
+        :disabled="parentDisabledVal"
+        :class-name="classNamesVal.lockRule"
+        :handle-on-click="toggleLockRule"
+      />
+      <ActionElement
+        v-if="showMuteButtons"
+        :test-id="TestID.muteRule"
+        :label="muteRuleLabel"
+        :title="muteRuleTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.muteRule"
+        :handle-on-click="toggleMuteRuleFn"
+      />
+      <ActionElement
+        :test-id="TestID.removeRule"
+        :label="removeRuleLabel"
+        :title="removeRuleTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.removeRule"
+        :handle-on-click="removeRuleFn"
+      />
+      <SubQueryBody :disabled="disabledVal" :parent-disabled="disabledVal" />
+    </SubQueryWrapper>
     <template v-if="!showMatchModeEditor">
       <ValueSelector
         :value="ruleData?.operator"
@@ -194,40 +234,42 @@ function onValueSourceChange(v: string | string[]) {
         :handle-on-change="(v: unknown) => r.onChangeValue(v)"
       />
     </template>
-    <ActionElement
-      v-if="showCloneButtons"
-      :test-id="TestID.cloneRule"
-      :label="cloneRuleLabel"
-      :title="cloneRuleTitle"
-      :disabled="disabledVal"
-      :class-name="classNamesVal.cloneRule"
-      :handle-on-click="cloneRuleFn"
-    />
-    <ActionElement
-      v-if="showLockButtons"
-      :test-id="TestID.lockRule"
-      :label="lockRuleLabel"
-      :title="lockRuleTitle"
-      :disabled="parentDisabledVal"
-      :class-name="classNamesVal.lockRule"
-      :handle-on-click="toggleLockRule"
-    />
-    <ActionElement
-      v-if="showMuteButtons"
-      :test-id="TestID.muteRule"
-      :label="muteRuleLabel"
-      :title="muteRuleTitle"
-      :disabled="disabledVal"
-      :class-name="classNamesVal.muteRule"
-      :handle-on-click="toggleMuteRuleFn"
-    />
-    <ActionElement
-      :test-id="TestID.removeRule"
-      :label="removeRuleLabel"
-      :title="removeRuleTitle"
-      :disabled="disabledVal"
-      :class-name="classNamesVal.removeRule"
-      :handle-on-click="removeRuleFn"
-    />
+    <template v-if="!showMatchModeEditor">
+      <ActionElement
+        v-if="showCloneButtons"
+        :test-id="TestID.cloneRule"
+        :label="cloneRuleLabel"
+        :title="cloneRuleTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.cloneRule"
+        :handle-on-click="cloneRuleFn"
+      />
+      <ActionElement
+        v-if="showLockButtons"
+        :test-id="TestID.lockRule"
+        :label="lockRuleLabel"
+        :title="lockRuleTitle"
+        :disabled="parentDisabledVal"
+        :class-name="classNamesVal.lockRule"
+        :handle-on-click="toggleLockRule"
+      />
+      <ActionElement
+        v-if="showMuteButtons"
+        :test-id="TestID.muteRule"
+        :label="muteRuleLabel"
+        :title="muteRuleTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.muteRule"
+        :handle-on-click="toggleMuteRuleFn"
+      />
+      <ActionElement
+        :test-id="TestID.removeRule"
+        :label="removeRuleLabel"
+        :title="removeRuleTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.removeRule"
+        :handle-on-click="removeRuleFn"
+      />
+    </template>
   </div>
 </template>

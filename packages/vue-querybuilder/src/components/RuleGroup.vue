@@ -92,7 +92,149 @@ function shiftDownDisabledAt(idx: number) {
 </script>
 
 <template>
+  <!-- noRootWrapper: 子 query 仅渲染 header + body，与 React 一致 -->
+  <template v-if="props.noRootWrapper">
+    <div :class="classNamesVal.header">
+      <ShiftActions
+        v-if="showShiftActionsVal"
+        :test-id="TestID.shiftActions"
+        :shift-up="r.shiftGroupUp"
+        :shift-down="r.shiftGroupDown"
+        :shift-up-disabled="unwrapRef(r.shiftUpDisabled)"
+        :shift-down-disabled="unwrapRef(r.shiftDownDisabled)"
+        :labels="shiftLabels"
+        :titles="shiftTitles"
+        :class-name="classNamesVal.shiftActions"
+        :disabled="disabledVal"
+      />
+      <DragHandle
+        v-if="enableDragAndDropVal"
+        :test-id="TestID.dragHandle"
+        :label="dragHandleLabel"
+        :title="dragHandleTitle"
+        :class-name="classNamesVal.dragHandle"
+        :disabled="disabledVal"
+      />
+      <ValueSelector
+        v-if="combinatorVal !== undefined"
+        :value="combinatorVal"
+        :options="combinatorsList"
+        :test-id="TestID.combinators"
+        :title="combinatorTitle"
+        :class-name="classNamesVal.combinators"
+        :disabled="disabledVal"
+        :handle-on-change="(v: string | string[]) => r.onCombinatorChange(Array.isArray(v) ? v[0] : v)"
+      />
+      <NotToggle
+        v-if="schemaVal?.showNotToggle"
+        :test-id="TestID.notToggle"
+        :checked="!!ruleGroupVal?.not"
+        :class-name="classNamesVal.notToggle"
+        :disabled="disabledVal"
+        :handle-on-change="r.onNotToggleChange"
+      />
+      <ActionElement
+        :test-id="TestID.addRule"
+        :label="addRuleLabel"
+        :title="addRuleTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.addRule"
+        :handle-on-click="r.addRule"
+      />
+      <ActionElement
+        :test-id="TestID.addGroup"
+        :label="addGroupLabel"
+        :title="addGroupTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.addGroup"
+        :handle-on-click="r.addGroup"
+      />
+      <ActionElement
+        v-if="showCloneButtonsVal"
+        :test-id="TestID.cloneGroup"
+        :label="cloneGroupLabel"
+        :title="cloneGroupTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.cloneGroup"
+        :handle-on-click="r.cloneGroup"
+      />
+      <ActionElement
+        v-if="showLockButtonsVal"
+        :test-id="TestID.lockGroup"
+        :label="lockLabel"
+        :title="lockTitle"
+        :disabled="parentDisabledVal"
+        :class-name="classNamesVal.lockGroup"
+        :handle-on-click="r.toggleLockGroup"
+      />
+      <ActionElement
+        v-if="showMuteButtonsVal"
+        :test-id="TestID.muteGroup"
+        :label="muteGroupLabel"
+        :title="muteGroupTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.muteGroup"
+        :handle-on-click="r.toggleMuteGroup"
+      />
+      <ActionElement
+        v-if="props.path.length > 0"
+        :test-id="TestID.removeGroup"
+        :label="removeGroupLabel"
+        :title="removeGroupTitle"
+        :disabled="disabledVal"
+        :class-name="classNamesVal.removeGroup"
+        :handle-on-click="r.removeGroup"
+      />
+    </div>
+    <div :class="classNamesVal.body">
+      <template v-for="(child, idx) in rulesArray" :key="childKey(child, idx)">
+        <template v-if="!independentCombinatorsVal && showCombinatorsBetweenRulesVal && idx > 0">
+          <InlineCombinator
+            :value="combinatorVal"
+            :options="combinatorsList"
+            :test-id="TestID.inlineCombinator"
+            :title="combinatorTitle"
+            :class-name="classNamesVal.combinators"
+            :disabled="disabledVal"
+            :handle-on-change="(v: string) => r.onCombinatorChange(v)"
+          />
+        </template>
+        <InlineCombinator
+          v-if="typeof child === 'string'"
+          :value="child"
+          :options="combinatorsList"
+          :test-id="TestID.inlineCombinator"
+          :title="combinatorTitle"
+          :class-name="classNamesVal.combinators"
+          :disabled="disabledAt(idx)"
+          :handle-on-change="(v: string) => r.onIndependentCombinatorChange(v, idx)"
+        />
+        <component
+          v-else-if="isRuleGroup(child)"
+          :is="RuleGroupRecursive"
+          :path="pathAt(idx)"
+          :disabled="disabledAt(idx)"
+          :parent-disabled="parentDisabledVal || disabledVal"
+          :parent-muted="parentMutedVal"
+          :shift-up-disabled="pathsAreEqual([0], pathAt(idx))"
+          :shift-down-disabled="shiftDownDisabledAt(idx)"
+          :context="props.context"
+        />
+        <Rule
+          v-else-if="typeof child !== 'string'"
+          :path="pathAt(idx)"
+          :disabled="disabledAt(idx)"
+          :parent-disabled="parentDisabledVal || disabledVal"
+          :parent-muted="parentMutedVal"
+          :shift-up-disabled="pathsAreEqual([0], pathAt(idx))"
+          :shift-down-disabled="shiftDownDisabledAt(idx)"
+          :context="props.context"
+        />
+      </template>
+    </div>
+  </template>
   <div
+    v-else
     :class="outerClass"
     :title="accessibleDescription"
     :data-testid="TestID.ruleGroup"

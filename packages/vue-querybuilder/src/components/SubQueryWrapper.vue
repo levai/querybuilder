@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // @ts-nocheck - sub context schema/actions typing
 import { ref, watch, computed, inject, provide } from 'vue';
-import { rootPath } from '@react-querybuilder/core';
 import {
   add,
   remove,
@@ -17,7 +16,6 @@ import {
 } from '@react-querybuilder/core';
 import type { Path, RuleGroupTypeAny, RuleType } from '@react-querybuilder/core';
 import { QUERY_REF_KEY, DISPATCH_KEY, QUERY_BUILDER_CONTEXT_KEY } from '../context/queryBuilderContext';
-import RuleGroup from './RuleGroup.vue';
 
 const props = defineProps<{
   modelValue: unknown;
@@ -194,14 +192,5 @@ provide(QUERY_BUILDER_CONTEXT_KEY, subContextRef);
 </script>
 
 <template>
-  <div v-if="subQueryRef" class="queryBuilder-subQuery">
-    <RuleGroup
-      :path="rootPath"
-      :shift-up-disabled="true"
-      :shift-down-disabled="true"
-      :disabled="disabled"
-      :parent-disabled="disabled"
-      :parent-muted="false"
-    />
-  </div>
+  <slot v-if="subQueryRef" />
 </template>
