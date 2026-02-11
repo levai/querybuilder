@@ -195,6 +195,7 @@ function shiftDownDisabledAt(idx: number) {
             :test-id="TestID.inlineCombinator"
             :title="combinatorTitle"
             :class-name="classNamesVal.combinators"
+            :between-rules-class-name="classNamesVal.betweenRules"
             :disabled="disabledVal"
             :handle-on-change="(v: string) => r.onCombinatorChange(v)"
           />
@@ -206,6 +207,7 @@ function shiftDownDisabledAt(idx: number) {
           :test-id="TestID.inlineCombinator"
           :title="combinatorTitle"
           :class-name="classNamesVal.combinators"
+          :between-rules-class-name="classNamesVal.betweenRules"
           :disabled="disabledAt(idx)"
           :handle-on-change="(v: string) => r.onIndependentCombinatorChange(v, idx)"
         />
@@ -344,6 +346,7 @@ function shiftDownDisabledAt(idx: number) {
             :test-id="TestID.inlineCombinator"
             :title="combinatorTitle"
             :class-name="classNamesVal.combinators"
+            :between-rules-class-name="classNamesVal.betweenRules"
             :disabled="disabledVal"
             :handle-on-change="(v: string) => r.onCombinatorChange(v)"
           />
@@ -355,6 +358,7 @@ function shiftDownDisabledAt(idx: number) {
           :test-id="TestID.inlineCombinator"
           :title="combinatorTitle"
           :class-name="classNamesVal.combinators"
+          :between-rules-class-name="classNamesVal.betweenRules"
           :disabled="disabledAt(idx)"
           :handle-on-change="(v: string) => r.onIndependentCombinatorChange(v, idx)"
         />

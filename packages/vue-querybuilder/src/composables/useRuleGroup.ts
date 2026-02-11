@@ -143,6 +143,7 @@ export function useRuleGroup(options: UseRuleGroupPathOptions) {
     removeGroup: clsx(suppressStandardClassnames.value || standardClassnames.removeGroup, classNamesProp.value?.actionElement, classNamesProp.value?.removeGroup),
     shiftActions: clsx(standardClassnames.shiftActions, classNamesProp.value?.shiftActions),
     dragHandle: clsx(suppressStandardClassnames.value || standardClassnames.dragHandle, classNamesProp.value?.dragHandle),
+    betweenRules: clsx(!suppressStandardClassnames.value && standardClassnames.betweenRules, classNamesProp.value?.betweenRules),
   }));
 
   const outerClassName = computed(() =>
