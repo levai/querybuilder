@@ -74,6 +74,8 @@ const shiftTitles = computed(() => ({
 }));
 const dragHandleLabel = computed(() => (translationsVal.value?.dragHandle as { label?: string })?.label ?? '⁞⁞');
 const dragHandleTitle = computed(() => (translationsVal.value?.dragHandle as { title?: string })?.title ?? 'Drag handle');
+const notToggleLabel = computed(() => (translationsVal.value?.notToggle as { label?: string })?.label ?? 'Not');
+const notToggleTitle = computed(() => (translationsVal.value?.notToggle as { title?: string })?.title ?? 'Invert this group');
 
 function pathAt(idx: number) {
   const p = pathsMemoArray.value[idx]?.path;
@@ -131,6 +133,8 @@ function shiftDownDisabledAt(idx: number) {
         :checked="!!ruleGroupVal?.not"
         :class-name="classNamesVal.notToggle"
         :disabled="disabledVal"
+        :label="notToggleLabel"
+        :title="notToggleTitle"
         :handle-on-change="r.onNotToggleChange"
       />
       <ActionElement
@@ -282,6 +286,8 @@ function shiftDownDisabledAt(idx: number) {
         :checked="!!ruleGroupVal?.not"
         :class-name="classNamesVal.notToggle"
         :disabled="disabledVal"
+        :label="notToggleLabel"
+        :title="notToggleTitle"
         :handle-on-change="r.onNotToggleChange"
       />
       <ActionElement

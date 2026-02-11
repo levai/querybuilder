@@ -60,6 +60,8 @@ const cloneGroupLabel = computed(() => (translationsVal.value?.cloneRuleGroup as
 const cloneGroupTitle = computed(() => (translationsVal.value?.cloneRuleGroup as { title?: string })?.title ?? 'Clone group');
 const muteGroupLabel = computed(() => ((translationsVal.value?.muteGroup as { label?: string })?.label ?? ''));
 const muteGroupTitle = computed(() => ((translationsVal.value?.muteGroup as { title?: string })?.title ?? ''));
+const notToggleLabel = computed(() => (translationsVal.value?.notToggle as { label?: string })?.label ?? 'Not');
+const notToggleTitle = computed(() => (translationsVal.value?.notToggle as { title?: string })?.title ?? 'Invert this group');
 </script>
 
 <template>
@@ -80,6 +82,8 @@ const muteGroupTitle = computed(() => ((translationsVal.value?.muteGroup as { ti
       :checked="!!ruleGroupVal?.not"
       :class-name="classNamesVal.notToggle"
       :disabled="disabledVal"
+      :label="notToggleLabel"
+      :title="notToggleTitle"
       :handle-on-change="r.onNotToggleChange"
     />
     <ActionElement
