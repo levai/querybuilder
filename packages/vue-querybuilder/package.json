@@ -15,10 +15,91 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/vue-querybuilder.cjs"
       }
-    }
+    },
+    "./formatQuery": {
+      "import": {
+        "types": "./dist/fwd/formatQuery.d.ts",
+        "default": "./dist/fwd/formatQuery.js"
+      },
+      "require": {
+        "types": "./dist/fwd/formatQuery.d.ts",
+        "default": "./dist/fwd/formatQuery.cjs"
+      }
+    },
+    "./parseCEL": {
+      "import": {
+        "types": "./dist/fwd/parseCEL.d.ts",
+        "default": "./dist/fwd/parseCEL.js"
+      },
+      "require": {
+        "types": "./dist/fwd/parseCEL.d.ts",
+        "default": "./dist/fwd/parseCEL.cjs"
+      }
+    },
+    "./parseJSONata": {
+      "import": {
+        "types": "./dist/fwd/parseJSONata.d.ts",
+        "default": "./dist/fwd/parseJSONata.js"
+      },
+      "require": {
+        "types": "./dist/fwd/parseJSONata.d.ts",
+        "default": "./dist/fwd/parseJSONata.cjs"
+      }
+    },
+    "./parseJsonLogic": {
+      "import": {
+        "types": "./dist/fwd/parseJsonLogic.d.ts",
+        "default": "./dist/fwd/parseJsonLogic.js"
+      },
+      "require": {
+        "types": "./dist/fwd/parseJsonLogic.d.ts",
+        "default": "./dist/fwd/parseJsonLogic.cjs"
+      }
+    },
+    "./parseMongoDB": {
+      "import": {
+        "types": "./dist/fwd/parseMongoDB.d.ts",
+        "default": "./dist/fwd/parseMongoDB.js"
+      },
+      "require": {
+        "types": "./dist/fwd/parseMongoDB.d.ts",
+        "default": "./dist/fwd/parseMongoDB.cjs"
+      }
+    },
+    "./parseSpEL": {
+      "import": {
+        "types": "./dist/fwd/parseSpEL.d.ts",
+        "default": "./dist/fwd/parseSpEL.js"
+      },
+      "require": {
+        "types": "./dist/fwd/parseSpEL.d.ts",
+        "default": "./dist/fwd/parseSpEL.cjs"
+      }
+    },
+    "./parseSQL": {
+      "import": {
+        "types": "./dist/fwd/parseSQL.d.ts",
+        "default": "./dist/fwd/parseSQL.js"
+      },
+      "require": {
+        "types": "./dist/fwd/parseSQL.d.ts",
+        "default": "./dist/fwd/parseSQL.cjs"
+      }
+    },
+    "./transformQuery": {
+      "import": {
+        "types": "./dist/fwd/transformQuery.d.ts",
+        "default": "./dist/fwd/transformQuery.js"
+      },
+      "require": {
+        "types": "./dist/fwd/transformQuery.d.ts",
+        "default": "./dist/fwd/transformQuery.cjs"
+      }
+    },
+    "./dist/*": "./dist/*"
   },
   "types": "./dist/index.d.ts",
-  "files": ["dist", "dist/styles"],
+  "files": ["dist", "dist/styles", "dist/fwd"],
   "sideEffects": ["*.css", "*.scss"],
   "repository": {
     "type": "git",
@@ -30,7 +111,8 @@
   "homepage": "https://react-querybuilder.js.org/",
   "scripts": {
     "start": "vite",
-    "build": "vite build && vue-tsc -p tsconfig.build.json && bun run build:css",
+    "build": "vite build && bun run build:fwd && bun run build:css && vue-tsc -p tsconfig.build.json",
+    "build:fwd": "node scripts/build-fwd.mjs",
     "build:css": "mkdir -p dist/styles && cp ../core/src/*.scss dist && cp ../core/src/styles/*.scss dist/styles && bun sass --style=compressed --silence-deprecation=if-function dist",
     "typecheck": "vue-tsc --noEmit",
     "test": "bunx vitest run"
