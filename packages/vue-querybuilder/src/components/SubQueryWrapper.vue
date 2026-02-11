@@ -93,6 +93,7 @@ const schemaRef = computed(() => {
     getRuleDefaultValue: getRuleDefaultValueSub,
     createRule: createRuleSub,
     createRuleGroup: createRuleGroupSub,
+    validationMap: (parent as { validationMap?: unknown })?.validationMap ?? {},
   };
 });
 

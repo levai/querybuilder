@@ -7,7 +7,7 @@ import { QueryBuilder } from '../src';
 import { fields, initialQuery } from './demoData';
 import { defaultOptions, optionOrder, optionLabels } from './demoOptions';
 
-/** 与 React demo 一致：group 用 defaultValidator，rule 按“空 value 为 invalid”写 result[rule.id] */
+/** 与 React demo 一致：group 用 defaultValidator，rule 按“空 value 为 invalid”写 result[rule.id]，并递归校验子 query（如 Tour stops）*/
 const demoValidator: QueryValidator = (query: RuleGroupTypeAny) => {
   const result = defaultValidator(query) as Record<string, boolean | { valid: boolean; reasons?: unknown[] }>;
   const walk = (rg: RuleGroupTypeAny) => {
@@ -16,8 +16,14 @@ const demoValidator: QueryValidator = (query: RuleGroupTypeAny) => {
       if (isRuleGroup(r)) walk(r);
       else if (r.id) {
         const v = (r as RuleType).value;
-        const empty = v === '' || v === undefined || v === null || (Array.isArray(v) && v.length === 0);
-        result[r.id] = !empty;
+        if (isRuleGroup(v)) {
+          Object.assign(result, defaultValidator(v));
+          walk(v);
+          result[r.id] = true;
+        } else {
+          const empty = v === '' || v === undefined || v === null || (Array.isArray(v) && v.length === 0);
+          result[r.id] = !empty;
+        }
       }
     }
   };
