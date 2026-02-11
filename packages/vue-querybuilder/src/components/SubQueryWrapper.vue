@@ -45,7 +45,7 @@ const schemaRef = computed(() => {
   const getRuleDefaultOperatorSub = (parent as { getRuleDefaultOperator?: (f: string) => string })?.getRuleDefaultOperator ?? (() => '=');
   const getValueSourcesSub = (parent as { getValueSources?: (f: string, o: string) => unknown })?.getValueSources ?? (() => ['value']);
   const getValuesSub = (parent as { getValues?: (f: string, o: string, m: { fieldData: unknown }) => unknown[] })?.getValues ?? (() => []);
-  const getValueEditorTypeSub = (parent as { getValueEditorType?: (f: string, o: string) => string })?.getValueEditorType ?? (() => 'text');
+  const getValueEditorTypeSub = (parent as { getValueEditorType?: (f: string, o: string, m: { fieldData: unknown }) => string })?.getValueEditorType ?? (() => 'text');
 
   const getRuleDefaultValueSub = (r: RuleType): unknown => {
     const fieldData = (subFieldMap as Record<string, unknown>)[r.field as string] ?? { name: r.field, value: r.field, label: r.field };
@@ -57,7 +57,7 @@ const schemaRef = computed(() => {
       return filtered.length > 0 ? getFirstOption(filtered) : '';
     }
     if (vals.length > 0) {
-      const editorType = getValueEditorTypeSub(r.field, r.operator);
+      const editorType = getValueEditorTypeSub(r.field, r.operator, { fieldData });
       if (editorType === 'checkbox') return false;
       const first = getFirstOption(vals as { name?: string; value?: string }[]);
       const valuePlaceholder = '~';
