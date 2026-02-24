@@ -6,6 +6,8 @@ import MatchModeEditor from './components/MatchModeEditor.vue';
 import NotToggle from './components/NotToggle.vue';
 import Rule from './components/Rule.vue';
 import RuleGroup from './components/RuleGroup.vue';
+import RuleGroupBodyComponents from './components/RuleGroupBodyComponents.vue';
+import RuleGroupHeaderComponents from './components/RuleGroupHeaderComponents.vue';
 import ShiftActions from './components/ShiftActions.vue';
 import ValueEditor from './components/ValueEditor.vue';
 import ValueSelector from './components/ValueSelector.vue';
@@ -36,8 +38,8 @@ export const defaultControlElements: Controls<FullField, string> = {
   removeRuleAction: ActionElement as Controls<FullField, string>['removeRuleAction'],
   rule: Rule as Controls<FullField, string>['rule'],
   ruleGroup: RuleGroup as Controls<FullField, string>['ruleGroup'],
-  ruleGroupBodyElements: RuleGroup as Controls<FullField, string>['ruleGroupBodyElements'],
-  ruleGroupHeaderElements: RuleGroup as Controls<FullField, string>['ruleGroupHeaderElements'],
+  ruleGroupBodyElements: RuleGroupBodyComponents as Controls<FullField, string>['ruleGroupBodyElements'],
+  ruleGroupHeaderElements: RuleGroupHeaderComponents as Controls<FullField, string>['ruleGroupHeaderElements'],
   shiftActions: ShiftActions,
   valueEditor: ValueEditor,
   valueSelector: ValueSelector,

@@ -1,23 +1,17 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import { isRuleGroup, pathsAreEqual, standardClassnames, TestID } from '@react-querybuilder/core';
-import type { RuleGroupTypeAny, RuleType } from '@react-querybuilder/core';
+import { standardClassnames, TestID } from '@react-querybuilder/core';
+import type { RuleGroupTypeAny } from '@react-querybuilder/core';
 import { useRuleGroup, type UseRuleGroupPathOptions } from '../composables/useRuleGroup';
 import { useNativeRuleGroupDnD } from '../composables/useNativeRuleGroupDnD';
 import { QUERY_BUILDER_CONTEXT_KEY } from '../context/queryBuilderContext';
-import Rule from './Rule.vue';
-import ValueSelector from './ValueSelector.vue';
-import NotToggle from './NotToggle.vue';
-import ActionElement from './ActionElement.vue';
-import ShiftActions from './ShiftActions.vue';
-import DragHandle from './DragHandle.vue';
-import InlineCombinator from './InlineCombinator.vue';
+import RuleGroupHeaderComponents from './RuleGroupHeaderComponents.vue';
+import RuleGroupBodyComponents from './RuleGroupBodyComponents.vue';
 
 const props = defineProps<UseRuleGroupPathOptions>();
 
 const ctx = inject(QUERY_BUILDER_CONTEXT_KEY);
-const schemaVal = computed(() => (ctx?.value as { schema?: { value?: { showNotToggle?: boolean; showShiftActions?: boolean; enableDragAndDrop?: boolean; showCloneButtons?: boolean; showMuteButtons?: boolean; showCombinatorsBetweenRules?: boolean; independentCombinators?: boolean; controls?: unknown; classNames?: Record<string, string> } } })?.schema?.value);
-const translationsVal = computed(() => (ctx?.value as { translations?: { value?: Record<string, unknown> } })?.translations?.value ?? {});
+const schemaVal = computed(() => (ctx?.value as { schema?: { value?: { enableDragAndDrop?: boolean; classNames?: Record<string, string> } } })?.schema?.value);
 
 const r = useRuleGroup(props);
 
@@ -25,82 +19,29 @@ function unwrapRef<T>(v: T | { value?: T } | undefined): T {
   if (v != null && typeof v === 'object' && 'value' in v) return (v as { value: T }).value as T;
   return v as T;
 }
+
 const outerClass = computed(() => (unwrapRef(r.outerClassName) ?? '') as string);
 const groupId = computed(() => (unwrapRef(r.id) ?? '') as string);
 const classNamesVal = computed(() => (unwrapRef(r.classNames) ?? {}) as Record<string, string>);
-const disabledVal = computed(() => !!unwrapRef(r.disabled));
-const parentDisabledVal = computed(() => !!unwrapRef(r.parentDisabled));
-const parentMutedVal = computed(() => !!unwrapRef(r.parentMuted));
-const combinatorVal = computed(() => (unwrapRef(r.combinator) ?? '') as string);
 const ruleGroupVal = computed(() => unwrapRef(r.ruleGroup) as RuleGroupTypeAny | null);
-const rulesArray = computed(() => ruleGroupVal.value?.rules ?? []);
-const pathsMemoArray = computed(() => (unwrapRef(r.pathsMemo) ?? []) as { path: number[]; disabled: boolean }[]);
+const disabledVal = computed(() => !!unwrapRef(r.disabled));
+
 const schemaUnwrapped = computed(() => {
-  const s = (r.schema as { value?: { combinators?: unknown[]; showLockButtons?: boolean; controls?: { ruleGroup?: unknown } } })?.value ?? r.schema;
+  const s = (r.schema as { value?: { controls?: { ruleGroupHeaderElements?: unknown; ruleGroupBodyElements?: unknown } } })?.value ?? r.schema;
   return s ?? {};
 });
-const schemaValForControls = computed(() => schemaUnwrapped.value as { controls?: { ruleGroup?: unknown }; combinators?: unknown[]; showLockButtons?: boolean; showCombinatorsBetweenRules?: boolean; independentCombinators?: boolean } | undefined);
-const showCombinatorsBetweenRulesVal = computed(() => !!schemaValForControls.value?.showCombinatorsBetweenRules);
-const independentCombinatorsVal = computed(() => !!schemaValForControls.value?.independentCombinators);
-const RuleGroupRecursive = computed(() => schemaValForControls.value?.controls?.ruleGroup);
-const combinatorsList = computed(() => (schemaValForControls.value?.combinators ?? []) as { name: string; label: string }[]);
-const showLockButtonsVal = computed(() => !!schemaValForControls.value?.showLockButtons);
+const controls = computed(() => (schemaUnwrapped.value as { controls?: { ruleGroupHeaderElements?: unknown; ruleGroupBodyElements?: unknown } })?.controls);
+const RuleGroupHeaderElements = computed(() => controls.value?.ruleGroupHeaderElements ?? RuleGroupHeaderComponents);
+const RuleGroupBodyElements = computed(() => controls.value?.ruleGroupBodyElements ?? RuleGroupBodyComponents);
 
-const combinatorTitle = computed(() => (translationsVal.value?.combinators as { title?: string })?.title ?? '');
-const addRuleLabel = computed(() => (translationsVal.value?.addRule as { label?: string })?.label ?? '');
-const addRuleTitle = computed(() => (translationsVal.value?.addRule as { title?: string })?.title ?? '');
-const addGroupLabel = computed(() => (translationsVal.value?.addGroup as { label?: string })?.label ?? '');
-const addGroupTitle = computed(() => (translationsVal.value?.addGroup as { title?: string })?.title ?? '');
-const lockLabel = computed(() => (disabledVal.value ? (translationsVal.value?.lockGroupDisabled as { label?: string })?.label : (translationsVal.value?.lockGroup as { label?: string })?.label) ?? '');
-const lockTitle = computed(() => (disabledVal.value ? (translationsVal.value?.lockGroupDisabled as { title?: string })?.title : (translationsVal.value?.lockGroup as { title?: string })?.title) ?? '');
-const removeGroupLabel = computed(() => (translationsVal.value?.removeGroup as { label?: string })?.label ?? '');
-const removeGroupTitle = computed(() => (translationsVal.value?.removeGroup as { title?: string })?.title ?? '');
-const showShiftActionsVal = computed(() => !!schemaVal.value?.showShiftActions && props.path.length > 0);
-// 根组（path []）也需作为 drop 目标，否则无法拖到「第一个前面」；仅非根组显示组拖拽手柄
 const enableDropTargetsVal = computed(() => !!schemaVal.value?.enableDragAndDrop);
-const showGroupDragHandleVal = computed(() => enableDropTargetsVal.value && props.path.length > 0);
-const showCloneButtonsVal = computed(() => !!schemaVal.value?.showCloneButtons && props.path.length > 0);
-const showMuteButtonsVal = computed(() => !!schemaVal.value?.showMuteButtons);
-const cloneGroupLabel = computed(() => (translationsVal.value?.cloneRuleGroup as { label?: string })?.label ?? '⧉');
-const cloneGroupTitle = computed(() => (translationsVal.value?.cloneRuleGroup as { title?: string })?.title ?? 'Clone group');
-const groupMuted = computed(() => !!ruleGroupVal.value?.muted);
-const accessibleDescription = computed(() => (unwrapRef(r.accessibleDescription) ?? '') as string);
-const muteGroupLabel = computed(() => (groupMuted.value ? (translationsVal.value?.unmuteGroup as { label?: string })?.label : (translationsVal.value?.muteGroup as { label?: string })?.label) ?? '');
-const muteGroupTitle = computed(() => (groupMuted.value ? (translationsVal.value?.unmuteGroup as { title?: string })?.title : (translationsVal.value?.muteGroup as { title?: string })?.title) ?? '');
-const shiftLabels = computed(() => ({
-  shiftUp: (translationsVal.value?.shiftActionUp as { label?: string })?.label ?? '˄',
-  shiftDown: (translationsVal.value?.shiftActionDown as { label?: string })?.label ?? '˅',
-}));
-const shiftTitles = computed(() => ({
-  shiftUp: (translationsVal.value?.shiftActionUp as { title?: string })?.title ?? 'Shift up',
-  shiftDown: (translationsVal.value?.shiftActionDown as { title?: string })?.title ?? 'Shift down',
-}));
-const dragHandleLabel = computed(() => (translationsVal.value?.dragHandle as { label?: string })?.label ?? '⁞⁞');
-const dragHandleTitle = computed(() => (translationsVal.value?.dragHandle as { title?: string })?.title ?? 'Drag handle');
-const notToggleLabel = computed(() => (translationsVal.value?.notToggle as { label?: string })?.label ?? 'Not');
-const notToggleTitle = computed(() => (translationsVal.value?.notToggle as { title?: string })?.title ?? 'Invert this group');
-
-function pathAt(idx: number) {
-  const p = pathsMemoArray.value[idx]?.path;
-  return p ?? [...props.path, idx];
-}
-function disabledAt(idx: number) {
-  return pathsMemoArray.value[idx]?.disabled ?? false;
-}
-function childKey(child: unknown, idx: number) {
-  if (typeof child === 'string') return [...pathAt(idx), child].join('-');
-  return (child as RuleType | RuleGroupTypeAny).id;
-}
-function shiftDownDisabledAt(idx: number) {
-  return props.path.length === 0 && idx === rulesArray.value.length - 1;
-}
 
 const ruleGroupDnd = useNativeRuleGroupDnD({
   path: computed(() => props.path),
   ruleGroup: ruleGroupVal,
   disabled: disabledVal,
 });
-// 与 React 一致：仅 header 为 drop 目标，无 body 内条带
+
 const ruleGroupDndClass = computed(() => {
   if (!enableDropTargetsVal.value) return '';
   const c: string[] = [];
@@ -112,7 +53,7 @@ const ruleGroupDndClass = computed(() => {
   if (ruleGroupDnd.groupItems.value && ruleGroupDnd.isOver.value) c.push(standardClassnames.dndGroup);
   return c.filter(Boolean).join(' ');
 });
-// 仅用于 v-else 外层：与 React outerClassName 一致，只带 dragging / dndGroup
+
 const ruleGroupDndOuterClass = computed(() => {
   if (!enableDropTargetsVal.value) return '';
   const c: string[] = [];
@@ -121,10 +62,12 @@ const ruleGroupDndOuterClass = computed(() => {
     c.push(standardClassnames.dndGroup);
   return c.filter(Boolean).join(' ');
 });
+
+const accessibleDescription = computed(() => (unwrapRef(r.accessibleDescription) ?? '') as string);
 </script>
 
 <template>
-  <!-- noRootWrapper: 与 React 一致，dropRef + dndOver 在 header 上，保证 ruleGroup-header 以显示 core 条带 -->
+  <!-- noRootWrapper: 与 React 一致，dropRef + dndOver 在 header 上 -->
   <template v-if="props.noRootWrapper">
     <div
       ref="ruleGroupDnd.dropRef"
@@ -133,161 +76,19 @@ const ruleGroupDndOuterClass = computed(() => {
       @drop="enableDropTargetsVal ? ruleGroupDnd.onDrop($event) : undefined"
       @dragleave="enableDropTargetsVal ? ruleGroupDnd.onDragleave($event) : undefined"
     >
-      <ShiftActions
-        v-if="showShiftActionsVal"
-        :test-id="TestID.shiftActions"
-        :shift-up="r.shiftGroupUp"
-        :shift-down="r.shiftGroupDown"
-        :shift-up-disabled="unwrapRef(r.shiftUpDisabled)"
-        :shift-down-disabled="unwrapRef(r.shiftDownDisabled)"
-        :labels="shiftLabels"
-        :titles="shiftTitles"
-        :class-name="classNamesVal.shiftActions"
-        :disabled="disabledVal"
-      />
-      <span
-        v-if="showGroupDragHandleVal"
-        ref="ruleGroupDnd.dragHandleRef"
-        draggable="true"
-        role="button"
-        tabindex="-1"
-        aria-label="Drag handle"
-        @dragstart="ruleGroupDnd.onDragStart($event)"
-        @dragend="ruleGroupDnd.onDragEnd($event)"
-      >
-        <DragHandle
-          :test-id="TestID.dragHandle"
-          :label="dragHandleLabel"
-          :title="dragHandleTitle"
-          :class-name="classNamesVal.dragHandle"
-          :disabled="disabledVal"
-        />
-      </span>
-      <ValueSelector
-        v-if="combinatorVal !== undefined"
-        :value="combinatorVal"
-        :options="combinatorsList"
-        :test-id="TestID.combinators"
-        :title="combinatorTitle"
-        :class-name="classNamesVal.combinators"
-        :disabled="disabledVal"
-        :handle-on-change="(v: string | string[]) => r.onCombinatorChange(Array.isArray(v) ? v[0] : v)"
-      />
-      <NotToggle
-        v-if="schemaVal?.showNotToggle"
-        :test-id="TestID.notToggle"
-        :checked="!!ruleGroupVal?.not"
-        :class-name="classNamesVal.notToggle"
-        :disabled="disabledVal"
-        :label="notToggleLabel"
-        :title="notToggleTitle"
-        :handle-on-change="r.onNotToggleChange"
-      />
-      <ActionElement
-        :test-id="TestID.addRule"
-        :label="addRuleLabel"
-        :title="addRuleTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.addRule"
-        :handle-on-click="r.addRule"
-      />
-      <ActionElement
-        :test-id="TestID.addGroup"
-        :label="addGroupLabel"
-        :title="addGroupTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.addGroup"
-        :handle-on-click="r.addGroup"
-      />
-      <ActionElement
-        v-if="showCloneButtonsVal"
-        :test-id="TestID.cloneGroup"
-        :label="cloneGroupLabel"
-        :title="cloneGroupTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.cloneGroup"
-        :handle-on-click="r.cloneGroup"
-      />
-      <ActionElement
-        v-if="showLockButtonsVal"
-        :test-id="TestID.lockGroup"
-        :label="lockLabel"
-        :title="lockTitle"
-        :disabled="parentDisabledVal"
-        :class-name="classNamesVal.lockGroup"
-        :handle-on-click="r.toggleLockGroup"
-      />
-      <ActionElement
-        v-if="showMuteButtonsVal"
-        :test-id="TestID.muteGroup"
-        :label="muteGroupLabel"
-        :title="muteGroupTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.muteGroup"
-        :handle-on-click="r.toggleMuteGroup"
-      />
-      <ActionElement
-        v-if="props.path.length > 0"
-        :test-id="TestID.removeGroup"
-        :label="removeGroupLabel"
-        :title="removeGroupTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.removeGroup"
-        :handle-on-click="r.removeGroup"
+      <component
+        :is="RuleGroupHeaderElements"
+        :rg="r"
+        :drag-handle-ref="ruleGroupDnd.dragHandleRef"
+        :on-drag-start="ruleGroupDnd.onDragStart"
+        :on-drag-end="ruleGroupDnd.onDragEnd"
       />
     </div>
     <div :class="classNamesVal.body">
-      <template v-for="(child, idx) in rulesArray" :key="childKey(child, idx)">
-        <template v-if="!independentCombinatorsVal && showCombinatorsBetweenRulesVal && idx > 0">
-          <InlineCombinator
-            :value="combinatorVal"
-            :options="combinatorsList"
-            :test-id="TestID.inlineCombinator"
-            :title="combinatorTitle"
-            :class-name="classNamesVal.combinators"
-            :between-rules-class-name="classNamesVal.betweenRules"
-            :disabled="disabledVal"
-            :handle-on-change="(v: string) => r.onCombinatorChange(v)"
-            :dnd-path="enableDropTargetsVal ? [...props.path, idx] : undefined"
-            :dnd-rules="enableDropTargetsVal ? rulesArray : undefined"
-          />
-        </template>
-        <InlineCombinator
-          v-if="typeof child === 'string'"
-          :value="child"
-          :options="combinatorsList"
-          :test-id="TestID.inlineCombinator"
-          :title="combinatorTitle"
-          :class-name="classNamesVal.combinators"
-          :between-rules-class-name="classNamesVal.betweenRules"
-          :disabled="disabledAt(idx)"
-          :handle-on-change="(v: string) => r.onIndependentCombinatorChange(v, idx)"
-        />
-        <component
-          v-else-if="isRuleGroup(child)"
-          :is="RuleGroupRecursive"
-          :path="pathAt(idx)"
-          :disabled="disabledAt(idx)"
-          :parent-disabled="parentDisabledVal || disabledVal"
-          :parent-muted="parentMutedVal"
-          :shift-up-disabled="pathsAreEqual([0], pathAt(idx))"
-          :shift-down-disabled="shiftDownDisabledAt(idx)"
-          :context="props.context"
-        />
-        <Rule
-          v-else-if="typeof child !== 'string'"
-          :path="pathAt(idx)"
-          :disabled="disabledAt(idx)"
-          :parent-disabled="parentDisabledVal || disabledVal"
-          :parent-muted="parentMutedVal"
-          :shift-up-disabled="pathsAreEqual([0], pathAt(idx))"
-          :shift-down-disabled="shiftDownDisabledAt(idx)"
-          :context="props.context"
-        />
-      </template>
+      <component :is="RuleGroupBodyElements" :rg="r" :context="props.context" />
     </div>
   </template>
-  <!-- 与 React 一致：dropRef + dndOver 在 header 上，外层仅 dragging/dndGroup -->
+  <!-- 默认：外层 ruleGroup + header（drop 目标）+ body -->
   <div
     v-else
     :class="[outerClass, ruleGroupDndOuterClass]"
@@ -305,158 +106,16 @@ const ruleGroupDndOuterClass = computed(() => {
       @drop="enableDropTargetsVal ? ruleGroupDnd.onDrop($event) : undefined"
       @dragleave="enableDropTargetsVal ? ruleGroupDnd.onDragleave($event) : undefined"
     >
-      <ShiftActions
-        v-if="showShiftActionsVal"
-        :test-id="TestID.shiftActions"
-        :shift-up="r.shiftGroupUp"
-        :shift-down="r.shiftGroupDown"
-        :shift-up-disabled="unwrapRef(r.shiftUpDisabled)"
-        :shift-down-disabled="unwrapRef(r.shiftDownDisabled)"
-        :labels="shiftLabels"
-        :titles="shiftTitles"
-        :class-name="classNamesVal.shiftActions"
-        :disabled="disabledVal"
-      />
-      <span
-        v-if="showGroupDragHandleVal"
-        ref="ruleGroupDnd.dragHandleRef"
-        draggable="true"
-        role="button"
-        tabindex="-1"
-        aria-label="Drag handle"
-        @dragstart="ruleGroupDnd.onDragStart($event)"
-        @dragend="ruleGroupDnd.onDragEnd($event)"
-      >
-        <DragHandle
-          :test-id="TestID.dragHandle"
-          :label="dragHandleLabel"
-          :title="dragHandleTitle"
-          :class-name="classNamesVal.dragHandle"
-          :disabled="disabledVal"
-        />
-      </span>
-      <ValueSelector
-        v-if="combinatorVal !== undefined"
-        :value="combinatorVal"
-        :options="combinatorsList"
-        :test-id="TestID.combinators"
-        :title="combinatorTitle"
-        :class-name="classNamesVal.combinators"
-        :disabled="disabledVal"
-        :handle-on-change="(v: string | string[]) => r.onCombinatorChange(Array.isArray(v) ? v[0] : v)"
-      />
-      <NotToggle
-        v-if="schemaVal?.showNotToggle"
-        :test-id="TestID.notToggle"
-        :checked="!!ruleGroupVal?.not"
-        :class-name="classNamesVal.notToggle"
-        :disabled="disabledVal"
-        :label="notToggleLabel"
-        :title="notToggleTitle"
-        :handle-on-change="r.onNotToggleChange"
-      />
-      <ActionElement
-        :test-id="TestID.addRule"
-        :label="addRuleLabel"
-        :title="addRuleTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.addRule"
-        :handle-on-click="r.addRule"
-      />
-      <ActionElement
-        :test-id="TestID.addGroup"
-        :label="addGroupLabel"
-        :title="addGroupTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.addGroup"
-        :handle-on-click="r.addGroup"
-      />
-      <ActionElement
-        v-if="showCloneButtonsVal"
-        :test-id="TestID.cloneGroup"
-        :label="cloneGroupLabel"
-        :title="cloneGroupTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.cloneGroup"
-        :handle-on-click="r.cloneGroup"
-      />
-      <ActionElement
-        v-if="showLockButtonsVal"
-        :test-id="TestID.lockGroup"
-        :label="lockLabel"
-        :title="lockTitle"
-        :disabled="parentDisabledVal"
-        :class-name="classNamesVal.lockGroup"
-        :handle-on-click="r.toggleLockGroup"
-      />
-      <ActionElement
-        v-if="showMuteButtonsVal"
-        :test-id="TestID.muteGroup"
-        :label="muteGroupLabel"
-        :title="muteGroupTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.muteGroup"
-        :handle-on-click="r.toggleMuteGroup"
-      />
-      <ActionElement
-        v-if="props.path.length > 0"
-        :test-id="TestID.removeGroup"
-        :label="removeGroupLabel"
-        :title="removeGroupTitle"
-        :disabled="disabledVal"
-        :class-name="classNamesVal.removeGroup"
-        :handle-on-click="r.removeGroup"
+      <component
+        :is="RuleGroupHeaderElements"
+        :rg="r"
+        :drag-handle-ref="ruleGroupDnd.dragHandleRef"
+        :on-drag-start="ruleGroupDnd.onDragStart"
+        :on-drag-end="ruleGroupDnd.onDragEnd"
       />
     </div>
     <div :class="classNamesVal.body">
-      <template v-for="(child, idx) in rulesArray" :key="childKey(child, idx)">
-        <template v-if="!independentCombinatorsVal && showCombinatorsBetweenRulesVal && idx > 0">
-          <InlineCombinator
-            :value="combinatorVal"
-            :options="combinatorsList"
-            :test-id="TestID.inlineCombinator"
-            :title="combinatorTitle"
-            :class-name="classNamesVal.combinators"
-            :between-rules-class-name="classNamesVal.betweenRules"
-            :disabled="disabledVal"
-            :handle-on-change="(v: string) => r.onCombinatorChange(v)"
-            :dnd-path="enableDropTargetsVal ? [...props.path, idx] : undefined"
-            :dnd-rules="enableDropTargetsVal ? rulesArray : undefined"
-          />
-        </template>
-        <InlineCombinator
-          v-if="typeof child === 'string'"
-          :value="child"
-          :options="combinatorsList"
-          :test-id="TestID.inlineCombinator"
-          :title="combinatorTitle"
-          :class-name="classNamesVal.combinators"
-          :between-rules-class-name="classNamesVal.betweenRules"
-          :disabled="disabledAt(idx)"
-          :handle-on-change="(v: string) => r.onIndependentCombinatorChange(v, idx)"
-        />
-        <component
-          v-else-if="isRuleGroup(child)"
-          :is="RuleGroupRecursive"
-          :path="pathAt(idx)"
-          :disabled="disabledAt(idx)"
-          :parent-disabled="parentDisabledVal || disabledVal"
-          :parent-muted="parentMutedVal"
-          :shift-up-disabled="pathsAreEqual([0], pathAt(idx))"
-          :shift-down-disabled="shiftDownDisabledAt(idx)"
-          :context="props.context"
-        />
-        <Rule
-          v-else-if="typeof child !== 'string'"
-          :path="pathAt(idx)"
-          :disabled="disabledAt(idx)"
-          :parent-disabled="parentDisabledVal || disabledVal"
-          :parent-muted="parentMutedVal"
-          :shift-up-disabled="pathsAreEqual([0], pathAt(idx))"
-          :shift-down-disabled="shiftDownDisabledAt(idx)"
-          :context="props.context"
-        />
-      </template>
+      <component :is="RuleGroupBodyElements" :rg="r" :context="props.context" />
     </div>
   </div>
 </template>
