@@ -70,7 +70,7 @@ bun run start   # dev server
 
 ## Status
 
-- **Core:** QueryBuilder, RuleGroup, Rule; default controls (ValueSelector, ValueEditor, ActionElement, NotToggle, ShiftActions, InlineCombinator, MatchModeEditor, SubQueryWrapper).
+- **Core:** QueryBuilder, RuleGroup, Rule; default controls (ValueSelector, ValueEditor, ActionElement, NotToggle, ShiftActions, InlineCombinator, MatchModeEditor, SubQueryWrapper). SubQueryHeader（根组 header）从 schema.controls 读取控件，与 RuleGroupHeaderComponents 一致，便于 UI 包（如 @vue-querybuilder/element-plus）统一替换。
 - **Actions:** Add/remove/clone rules and groups; shift up/down; lock/mute; combinator and NOT; validation (validator + validationMap).
 - **State:** Controlled (`modelValue` / `@update:modelValue`) or uncontrolled (`defaultQuery`); pathsMemo, useControlledOrUncontrolled, useDeprecatedProps.
 - Uses `@react-querybuilder/core` mutable API (`addInPlace`, `updateInPlace`, `removeInPlace`, `moveInPlace`).

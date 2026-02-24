@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "isolatedDeclarations": false,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "vue-querybuilder": ["../vue-querybuilder/src"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue"]
+}

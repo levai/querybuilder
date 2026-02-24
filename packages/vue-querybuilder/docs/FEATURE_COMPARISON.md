@@ -129,6 +129,7 @@
 | 子 Query 容器 | Rule 内 RuleGroupHeaderControlElements + RuleGroupBodyControlElements，useQueryBuilder(enableDragAndDrop: false) | SubQueryWrapper + SubQueryHeader + SubQueryBody ✓ |
 | 子 Query 数据 | getSubQueryBuilderProps + fields 等 | SubQueryWrapper schema（fields 等）+ enableDragAndDrop: false ✓ |
 | 子 Query 不启用 DnD | useQueryBuilder(..., enableDragAndDrop: false) | schema.enableDragAndDrop: false ✓ |
+| 根组 header 控件 | — | SubQueryHeader 从 schema.controls 读取（与 RuleGroupHeaderComponents 一致），使用 @vue-querybuilder/element-plus 时根 header 也为 EP 控件 ✓ |
 
 ---
 

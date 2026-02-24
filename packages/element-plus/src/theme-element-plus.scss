@@ -1,0 +1,81 @@
+/**
+ * Element Plus theme for vue-querybuilder.
+ * Maps Element Plus CSS variables to QueryBuilder (--rqb-*) so that
+ * rule groups, rules, borders and DnD indicators follow Element Plus styling.
+ * Import this after Element Plus styles; wrap QueryBuilder in .vue-querybuilder-element-plus
+ * or use QueryBuilderElementPlus component which applies this scope.
+ */
+.vue-querybuilder-element-plus {
+  /* Basic layout - EP uses 8px base unit */
+  --rqb-spacing: 8px;
+
+  /* Basic aesthetic → Element Plus tokens */
+  --rqb-base-color: var(--el-color-primary);
+  /* 现代 CSS 运行时算透明度（不依赖 Sass）：主色 10% 不透明 */
+  --rqb-background-color: color-mix(in srgb, var(--el-color-primary, #409eff) 10%, transparent);
+  @supports not (color: color-mix(in srgb, red, red)) {
+    --rqb-background-color: var(--el-fill-color-blank, #ffffff);
+  }
+  /* rqb 边框适配 EP：使用 --el-border-color，保证与 el-select/el-input 等一致 */
+  --rqb-border-color: var(--el-border-color, #dcdfe6);
+  --rqb-border-style: solid;
+  --rqb-border-radius: var(--el-border-radius-base, 4px);
+  --rqb-branch-color: var(--el-border-color-darker, #dcdfe6);
+
+  /* Drag-and-drop indicators → primary */
+  --rqb-dnd-drop-indicator-color: var(--el-color-primary);
+  --rqb-dnd-drop-indicator-style: dashed;
+  --rqb-dnd-drop-indicator-width: 2px;
+  --rqb-dnd-drop-indicator-copy-color: var(--el-color-success);
+  --rqb-dnd-drop-indicator-copy-style: dashed;
+  --rqb-dnd-drop-indicator-copy-width: 2px;
+  --rqb-dnd-drop-indicator-group-color: var(--el-color-primary-light-5, #409eff);
+  --rqb-dnd-drop-indicator-group-style: dashed;
+  --rqb-dnd-drop-indicator-group-width: 2px;
+  --rqb-dnd-drop-not-allowed-cursor: not-allowed;
+
+
+  /* Select/输入 按内容宽度，不铺满：覆盖 EP --el-select-width: 100% */
+  .ruleGroup-combinators,
+  .rule-fields,
+  .rule-operators,
+  .rule-valueSource,
+  .rule-value,
+  .rule-matchMode {
+    width: auto !important;
+    min-width: 0;
+    &.el-select {
+      --el-select-width: fit-content;
+      flex-shrink: 0;
+      min-width: 10em;
+    }
+  }
+
+  /* between/notBetween 双输入：横向一排 */
+  .value-editor-between {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: var(--rqb-spacing);
+    /* 防止子元素被压缩 */
+    .el-select,
+    .el-input,
+    .el-input-number,
+    .el-date-editor {
+      flex-shrink: 0;
+      min-width: 10em;
+      --el-select-width: fit-content;
+    }
+  }
+
+  .queryBuilder-dragHandle {
+    color: var(--el-text-color-regular);
+  }
+  .el-button + .el-button {
+    margin-left: 0;
+  }
+  .shiftActions .el-button {
+    height: 18px;
+  }
+}

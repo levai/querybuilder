@@ -1,0 +1,74 @@
+{
+  "name": "@vue-querybuilder/element-plus",
+  "version": "1.0.0-beta.1",
+  "description": "Element Plus control elements and theme for vue-querybuilder",
+  "type": "module",
+  "main": "./dist/vue-querybuilder_element-plus.cjs",
+  "module": "./dist/vue-querybuilder_element-plus.js",
+  "types": "./dist/vue-querybuilder_element-plus.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/vue-querybuilder_element-plus.d.ts",
+        "default": "./dist/vue-querybuilder_element-plus.js"
+      },
+      "require": {
+        "types": "./dist/vue-querybuilder_element-plus.d.cts",
+        "default": "./dist/vue-querybuilder_element-plus.cjs"
+      }
+    },
+    "./theme.css": {
+      "import": "./dist/theme-element-plus.css",
+      "require": "./dist/theme-element-plus.css"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "build": "bun --bun tsdown && mkdir -p dist && bun sass src/theme-element-plus.scss dist/theme-element-plus.css --style=compressed --silence-deprecation=if-function && vue-tsc -p tsconfig.build.json",
+    "typecheck": "vue-tsc --noEmit",
+    "start": "vite"
+  },
+  "dependencies": {
+    "vue-querybuilder": "workspace:*"
+  },
+  "peerDependencies": {
+    "element-plus": ">=2",
+    "vue": "^3.0.0",
+    "@element-plus/icons-vue": ">=2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "catalog:",
+    "element-plus": "^2.8.0",
+    "sass": "catalog:",
+    "typescript": "catalog:",
+    "unplugin-vue": "^7.1.1",
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.2.0",
+    "vite": "catalog:",
+    "@element-plus/icons-vue": "^2.3.0"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "querybuilder",
+    "element-plus",
+    "query",
+    "builder"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/react-querybuilder/react-querybuilder.git",
+    "directory": "packages/element-plus"
+  },
+  "peerDependenciesMeta": {
+    "@element-plus/icons-vue": {
+      "optional": true
+    }
+  }
+}
