@@ -94,10 +94,12 @@ export function useRule(options: UseRulePathOptions) {
     return getSep(rule.value?.field ?? '', rule.value?.operator ?? '', { fieldData: fieldData.value });
   });
   const hideValueControls = computed(() => {
+    const opName = (rule.value?.operator ?? '').toString().toLowerCase();
+    if (opName === 'null' || opName === 'notnull') return true;
     const ops = operators.value;
     const op = Array.isArray(ops)
-    ? (ops as { name?: string }[]).find((o) => o?.name === (rule.value?.operator ?? ''))
-    : undefined;
+      ? (ops as { name?: string }[]).find((o) => o?.name === (rule.value?.operator ?? ''))
+      : undefined;
     const arity = (op as { arity?: number | string })?.arity;
     return (typeof arity === 'string' && arity === 'unary') || (typeof arity === 'number' && arity < 2);
   });
