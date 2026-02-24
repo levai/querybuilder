@@ -48,6 +48,7 @@ const valuesVal = computed(() => (unwrap(r.values) ?? []) as Array<{ name: strin
 const valueEditorTypeVal = computed(() => (unwrap(r.valueEditorType) ?? 'text') as string);
 const inputTypeVal = computed(() => (unwrap(r.inputType) ?? 'text') as string);
 const valueEditorSeparatorVal = computed(() => unwrap(r.valueEditorSeparator) as string | null | undefined);
+const fieldDataVal = computed(() => unwrap(r.fieldData));
 const hideValueControlsVal = computed(() => !!unwrap(r.hideValueControls));
 const showLockButtons = computed(() => !!schemaVal.value?.showLockButtons);
 const showShiftActions = computed(() => !!schemaVal.value?.showShiftActions);
@@ -312,6 +313,7 @@ const controls = computed(() => {
         :test-id="TestID.valueEditor"
         :parse-numbers="!!schemaVal?.parseNumbers"
         :lists-as-arrays="!!schemaVal?.listsAsArrays"
+        :field-data="fieldDataVal"
         :handle-on-change="(v: unknown) => r.onChangeValue(v)"
       />
     </template>

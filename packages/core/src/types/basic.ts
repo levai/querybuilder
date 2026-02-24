@@ -146,6 +146,12 @@ interface BaseFullField<
   placeholder?: string;
   validator?: RuleValidator;
   comparator?: string | ((f: FullField, operator: string) => boolean);
+  /**
+   * Additional props to pass to the value editor component.
+   * UI libraries can use this to pass component-specific props (e.g., min/max/step for number inputs).
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  valueEditorProps?: Record<string, any>;
 }
 
 /**
