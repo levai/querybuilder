@@ -74,4 +74,4 @@ bun run start   # dev server
 - **Actions:** Add/remove/clone rules and groups; shift up/down; lock/mute; combinator and NOT; validation (validator + validationMap).
 - **State:** Controlled (`modelValue` / `@update:modelValue`) or uncontrolled (`defaultQuery`); pathsMemo, useControlledOrUncontrolled, useDeprecatedProps.
 - Uses `@react-querybuilder/core` mutable API (`addInPlace`, `updateInPlace`, `removeInPlace`, `moveInPlace`).
-- **Drag-and-drop:** not implemented (placeholder); planned for a later release.
+- **Drag-and-drop:** Implemented with native HTML5 DnD (no react-dnd). Set `enableDragAndDrop` to drag rules and groups; drop targets are rules, rule groups, and the space between rules (inline combinator). Optional props: `canDrop` (custom drop predicate), `copyModeModifierKey` (default `"alt"` for copy), `groupModeModifierKey` (default `"ctrl"` for group), `hideDefaultDragPreview`.

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import { isRuleGroup, pathsAreEqual, TestID } from '@react-querybuilder/core';
+import { isRuleGroup, pathsAreEqual, standardClassnames, TestID } from '@react-querybuilder/core';
 import type { RuleGroupTypeAny, RuleType } from '@react-querybuilder/core';
 import { useRuleGroup, type UseRuleGroupPathOptions } from '../composables/useRuleGroup';
+import { useNativeRuleGroupDnD } from '../composables/useNativeRuleGroupDnD';
 import { QUERY_BUILDER_CONTEXT_KEY } from '../context/queryBuilderContext';
 import Rule from './Rule.vue';
 import ValueSelector from './ValueSelector.vue';
@@ -15,7 +16,7 @@ import InlineCombinator from './InlineCombinator.vue';
 const props = defineProps<UseRuleGroupPathOptions>();
 
 const ctx = inject(QUERY_BUILDER_CONTEXT_KEY);
-const schemaVal = computed(() => (ctx?.value as { schema?: { value?: { showNotToggle?: boolean; showShiftActions?: boolean; enableDragAndDrop?: boolean; showCloneButtons?: boolean; showMuteButtons?: boolean; showCombinatorsBetweenRules?: boolean; independentCombinators?: boolean; controls?: unknown } } })?.schema?.value);
+const schemaVal = computed(() => (ctx?.value as { schema?: { value?: { showNotToggle?: boolean; showShiftActions?: boolean; enableDragAndDrop?: boolean; showCloneButtons?: boolean; showMuteButtons?: boolean; showCombinatorsBetweenRules?: boolean; independentCombinators?: boolean; controls?: unknown; classNames?: Record<string, string> } } })?.schema?.value);
 const translationsVal = computed(() => (ctx?.value as { translations?: { value?: Record<string, unknown> } })?.translations?.value ?? {});
 
 const r = useRuleGroup(props);
@@ -55,7 +56,9 @@ const lockTitle = computed(() => (disabledVal.value ? (translationsVal.value?.lo
 const removeGroupLabel = computed(() => (translationsVal.value?.removeGroup as { label?: string })?.label ?? '');
 const removeGroupTitle = computed(() => (translationsVal.value?.removeGroup as { title?: string })?.title ?? '');
 const showShiftActionsVal = computed(() => !!schemaVal.value?.showShiftActions && props.path.length > 0);
-const enableDragAndDropVal = computed(() => !!schemaVal.value?.enableDragAndDrop && props.path.length > 0);
+// 根组（path []）也需作为 drop 目标，否则无法拖到「第一个前面」；仅非根组显示组拖拽手柄
+const enableDropTargetsVal = computed(() => !!schemaVal.value?.enableDragAndDrop);
+const showGroupDragHandleVal = computed(() => enableDropTargetsVal.value && props.path.length > 0);
 const showCloneButtonsVal = computed(() => !!schemaVal.value?.showCloneButtons && props.path.length > 0);
 const showMuteButtonsVal = computed(() => !!schemaVal.value?.showMuteButtons);
 const cloneGroupLabel = computed(() => (translationsVal.value?.cloneRuleGroup as { label?: string })?.label ?? '⧉');
@@ -91,12 +94,45 @@ function childKey(child: unknown, idx: number) {
 function shiftDownDisabledAt(idx: number) {
   return props.path.length === 0 && idx === rulesArray.value.length - 1;
 }
+
+const ruleGroupDnd = useNativeRuleGroupDnD({
+  path: computed(() => props.path),
+  ruleGroup: ruleGroupVal,
+  disabled: disabledVal,
+});
+// 与 React 一致：仅 header 为 drop 目标，无 body 内条带
+const ruleGroupDndClass = computed(() => {
+  if (!enableDropTargetsVal.value) return '';
+  const c: string[] = [];
+  if (ruleGroupDnd.isDragging.value && !schemaVal.value?.classNames?.dndDragging) c.push(standardClassnames.dndDragging);
+  if (ruleGroupDnd.isOver.value && !schemaVal.value?.classNames?.dndOver) c.push(standardClassnames.dndOver);
+  if (ruleGroupDnd.dropNotAllowed.value && !schemaVal.value?.classNames?.dndDropNotAllowed)
+    c.push(standardClassnames.dndDropNotAllowed);
+  if (ruleGroupDnd.dropEffect.value === 'copy' && ruleGroupDnd.isOver.value) c.push(standardClassnames.dndCopy);
+  if (ruleGroupDnd.groupItems.value && ruleGroupDnd.isOver.value) c.push(standardClassnames.dndGroup);
+  return c.filter(Boolean).join(' ');
+});
+// 仅用于 v-else 外层：与 React outerClassName 一致，只带 dragging / dndGroup
+const ruleGroupDndOuterClass = computed(() => {
+  if (!enableDropTargetsVal.value) return '';
+  const c: string[] = [];
+  if (ruleGroupDnd.isDragging.value && !schemaVal.value?.classNames?.dndDragging) c.push(standardClassnames.dndDragging);
+  if (ruleGroupDnd.groupItems.value && ruleGroupDnd.isOver.value && !schemaVal.value?.classNames?.dndGroup)
+    c.push(standardClassnames.dndGroup);
+  return c.filter(Boolean).join(' ');
+});
 </script>
 
 <template>
-  <!-- noRootWrapper: 子 query 仅渲染 header + body，与 React 一致 -->
+  <!-- noRootWrapper: 与 React 一致，dropRef + dndOver 在 header 上，保证 ruleGroup-header 以显示 core 条带 -->
   <template v-if="props.noRootWrapper">
-    <div :class="classNamesVal.header">
+    <div
+      ref="ruleGroupDnd.dropRef"
+      :class="[classNamesVal.header, ruleGroupDndClass]"
+      @dragover="enableDropTargetsVal ? ruleGroupDnd.onDragover($event) : undefined"
+      @drop="enableDropTargetsVal ? ruleGroupDnd.onDrop($event) : undefined"
+      @dragleave="enableDropTargetsVal ? ruleGroupDnd.onDragleave($event) : undefined"
+    >
       <ShiftActions
         v-if="showShiftActionsVal"
         :test-id="TestID.shiftActions"
@@ -109,14 +145,24 @@ function shiftDownDisabledAt(idx: number) {
         :class-name="classNamesVal.shiftActions"
         :disabled="disabledVal"
       />
-      <DragHandle
-        v-if="enableDragAndDropVal"
-        :test-id="TestID.dragHandle"
-        :label="dragHandleLabel"
-        :title="dragHandleTitle"
-        :class-name="classNamesVal.dragHandle"
-        :disabled="disabledVal"
-      />
+      <span
+        v-if="showGroupDragHandleVal"
+        ref="ruleGroupDnd.dragHandleRef"
+        draggable="true"
+        role="button"
+        tabindex="-1"
+        aria-label="Drag handle"
+        @dragstart="ruleGroupDnd.onDragStart($event)"
+        @dragend="ruleGroupDnd.onDragEnd($event)"
+      >
+        <DragHandle
+          :test-id="TestID.dragHandle"
+          :label="dragHandleLabel"
+          :title="dragHandleTitle"
+          :class-name="classNamesVal.dragHandle"
+          :disabled="disabledVal"
+        />
+      </span>
       <ValueSelector
         v-if="combinatorVal !== undefined"
         :value="combinatorVal"
@@ -202,6 +248,8 @@ function shiftDownDisabledAt(idx: number) {
             :between-rules-class-name="classNamesVal.betweenRules"
             :disabled="disabledVal"
             :handle-on-change="(v: string) => r.onCombinatorChange(v)"
+            :dnd-path="enableDropTargetsVal ? [...props.path, idx] : undefined"
+            :dnd-rules="enableDropTargetsVal ? rulesArray : undefined"
           />
         </template>
         <InlineCombinator
@@ -239,9 +287,10 @@ function shiftDownDisabledAt(idx: number) {
       </template>
     </div>
   </template>
+  <!-- 与 React 一致：dropRef + dndOver 在 header 上，外层仅 dragging/dndGroup -->
   <div
     v-else
-    :class="outerClass"
+    :class="[outerClass, ruleGroupDndOuterClass]"
     :title="accessibleDescription"
     :data-testid="TestID.ruleGroup"
     :data-not="ruleGroupVal?.not ? 'true' : undefined"
@@ -249,7 +298,13 @@ function shiftDownDisabledAt(idx: number) {
     :data-level="props.path.length"
     :data-path="JSON.stringify(props.path)"
   >
-    <div :class="classNamesVal.header">
+    <div
+      ref="ruleGroupDnd.dropRef"
+      :class="[classNamesVal.header, ruleGroupDndClass]"
+      @dragover="enableDropTargetsVal ? ruleGroupDnd.onDragover($event) : undefined"
+      @drop="enableDropTargetsVal ? ruleGroupDnd.onDrop($event) : undefined"
+      @dragleave="enableDropTargetsVal ? ruleGroupDnd.onDragleave($event) : undefined"
+    >
       <ShiftActions
         v-if="showShiftActionsVal"
         :test-id="TestID.shiftActions"
@@ -262,14 +317,24 @@ function shiftDownDisabledAt(idx: number) {
         :class-name="classNamesVal.shiftActions"
         :disabled="disabledVal"
       />
-      <DragHandle
-        v-if="enableDragAndDropVal"
-        :test-id="TestID.dragHandle"
-        :label="dragHandleLabel"
-        :title="dragHandleTitle"
-        :class-name="classNamesVal.dragHandle"
-        :disabled="disabledVal"
-      />
+      <span
+        v-if="showGroupDragHandleVal"
+        ref="ruleGroupDnd.dragHandleRef"
+        draggable="true"
+        role="button"
+        tabindex="-1"
+        aria-label="Drag handle"
+        @dragstart="ruleGroupDnd.onDragStart($event)"
+        @dragend="ruleGroupDnd.onDragEnd($event)"
+      >
+        <DragHandle
+          :test-id="TestID.dragHandle"
+          :label="dragHandleLabel"
+          :title="dragHandleTitle"
+          :class-name="classNamesVal.dragHandle"
+          :disabled="disabledVal"
+        />
+      </span>
       <ValueSelector
         v-if="combinatorVal !== undefined"
         :value="combinatorVal"
@@ -355,6 +420,8 @@ function shiftDownDisabledAt(idx: number) {
             :between-rules-class-name="classNamesVal.betweenRules"
             :disabled="disabledVal"
             :handle-on-change="(v: string) => r.onCombinatorChange(v)"
+            :dnd-path="enableDropTargetsVal ? [...props.path, idx] : undefined"
+            :dnd-rules="enableDropTargetsVal ? rulesArray : undefined"
           />
         </template>
         <InlineCombinator

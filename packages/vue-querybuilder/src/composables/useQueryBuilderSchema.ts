@@ -12,6 +12,7 @@ import {
   generateID,
   getFirstOption,
   getOption,
+  group,
   isRuleGroup,
   isRuleGroupType,
   isRuleGroupTypeIC,
@@ -343,6 +344,18 @@ export function useQueryBuilderSchema<
     dispatchQuery(nextQuery);
   };
 
+  const groupRule = (sourcePath: Path, targetPath: Path, clone?: boolean) => {
+    const queryLocal = getQuery();
+    if (!queryLocal) return;
+    if (pathIsDisabled(sourcePath, queryLocal) || queryDisabled.value) return;
+    const nextQuery = group(queryLocal, sourcePath, targetPath, {
+      clone,
+      combinators: combinators.value,
+      idGenerator,
+    });
+    dispatchQuery(nextQuery);
+  };
+
   // 检测 independent combinators：优先使用 prop，否则通过 query 数据结构检测
   const independentCombinatorsFromQuery = computed(() => isRuleGroupTypeIC(rootGroup.value));
   const independentCombinatorsProp = computed(() => props.value.independentCombinators);
@@ -429,7 +442,7 @@ export function useQueryBuilderSchema<
       onPropChange,
       onRuleAdd,
       onRuleRemove: onRuleOrGroupRemove,
-      groupRule: () => {},
+      groupRule,
     })
   );
 

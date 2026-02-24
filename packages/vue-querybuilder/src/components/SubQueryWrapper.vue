@@ -92,6 +92,7 @@ const schemaRef = computed(() => {
     createRule: createRuleSub,
     createRuleGroup: createRuleGroupSub,
     validationMap: (parent as { validationMap?: unknown })?.validationMap ?? {},
+    enableDragAndDrop: false,
   };
 });
 

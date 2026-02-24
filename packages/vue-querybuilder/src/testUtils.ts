@@ -23,7 +23,7 @@ const defaultQuery: RuleGroupType = {
  */
 export function mountQueryBuilder(
   options: MountQueryBuilderOptions = {}
-): VueWrapper<InstanceType<typeof QueryBuilder>> {
+): VueWrapper {
   const {
     defaultQuery: query = defaultQuery,
     fields = [{ name: 'field1', label: 'Field 1' }],

@@ -15,6 +15,7 @@ import type {
   Classname,
   Classnames,
   CommonRuleSubComponentProps as CoreCommonRuleSubComponentProps,
+  DraggedItem,
   DropEffect,
   FlexibleOption,
   FlexibleOptionListProp,
@@ -572,4 +573,14 @@ export interface QueryBuilderProps<
   maxLevels?: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   context?: any;
+
+  // Drag-and-drop (native DnD)
+  /** Custom canDrop for drag-and-drop. Same contract as React DnD. */
+  canDrop?(params: { dragging: DraggedItem; hovering: DraggedItem; groupItems?: boolean }): boolean;
+  /** Modifier key for copy mode (default: "alt"). */
+  copyModeModifierKey?: string;
+  /** Modifier key for group mode (default: "ctrl"). */
+  groupModeModifierKey?: string;
+  /** Hide default drag preview image. */
+  hideDefaultDragPreview?: boolean;
 }

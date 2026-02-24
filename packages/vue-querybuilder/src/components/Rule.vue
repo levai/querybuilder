@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { TestID } from '@react-querybuilder/core';
+import { standardClassnames, TestID } from '@react-querybuilder/core';
 import { useRule, type UseRulePathOptions } from '../composables/useRule';
+import { useNativeRuleDnD } from '../composables/useNativeRuleDnD';
 import { useStopEventPropagation } from '../composables/useStopEventPropagation';
 import ValueSelector from './ValueSelector.vue';
 import ValueEditor from './ValueEditor.vue';
@@ -96,6 +97,23 @@ function onMatchModeChange(v: unknown) {
 const dragHandleLabel = computed(() => translationsVal.value?.dragHandle?.label ?? '⁞⁞');
 const dragHandleTitle = computed(() => translationsVal.value?.dragHandle?.title ?? 'Drag handle');
 
+const ruleDnd = useNativeRuleDnD({
+  path: pathArray,
+  rule: computed(() => ruleData.value ?? null),
+  disabled: disabledVal,
+});
+const ruleDndClass = computed(() => {
+  if (!schemaVal.value?.enableDragAndDrop) return '';
+  const c: string[] = [];
+  if (ruleDnd.isDragging.value && !schemaVal.value?.classNames?.dndDragging) c.push(standardClassnames.dndDragging);
+  if (ruleDnd.isOver.value && !schemaVal.value?.classNames?.dndOver) c.push(standardClassnames.dndOver);
+  if (ruleDnd.dropNotAllowed.value && !schemaVal.value?.classNames?.dndDropNotAllowed)
+    c.push(standardClassnames.dndDropNotAllowed);
+  if (ruleDnd.dropEffect.value === 'copy' && ruleDnd.isOver.value) c.push(standardClassnames.dndCopy);
+  if (ruleDnd.groupItems.value && ruleDnd.isOver.value) c.push(standardClassnames.dndGroup);
+  return c.filter(Boolean).join(' ');
+});
+
 const toggleLockRule = useStopEventPropagation(r.toggleLockRule);
 const removeRuleFn = useStopEventPropagation(r.removeRule);
 const cloneRuleFn = useStopEventPropagation(r.cloneRule);
@@ -114,11 +132,15 @@ function onValueSourceChange(v: string | string[]) {
 
 <template>
   <div
+    ref="ruleDnd.dropRef"
     :data-testid="TestID.rule"
-    :class="outerClass"
+    :class="[outerClass, ruleDndClass]"
     :data-rule-id="ruleId"
     :data-level="pathArray.length"
     :data-path="JSON.stringify(pathArray)"
+    @dragover="enableDragAndDrop ? ruleDnd.onDragover($event) : undefined"
+    @drop="enableDragAndDrop ? ruleDnd.onDrop($event) : undefined"
+    @dragleave="enableDragAndDrop ? ruleDnd.onDragleave($event) : undefined"
   >
     <ShiftActions
       v-if="showShiftActions"
@@ -132,14 +154,24 @@ function onValueSourceChange(v: string | string[]) {
       :class-name="classNamesVal.shiftActions"
       :disabled="disabledVal"
     />
-    <DragHandle
+    <span
       v-if="enableDragAndDrop"
-      :test-id="TestID.dragHandle"
-      :label="dragHandleLabel"
-      :title="dragHandleTitle"
-      :class-name="classNamesVal.dragHandle"
-      :disabled="disabledVal"
-    />
+      ref="ruleDnd.dragHandleRef"
+      draggable="true"
+      role="button"
+      tabindex="-1"
+      aria-label="Drag handle"
+      @dragstart="ruleDnd.onDragStart($event)"
+      @dragend="ruleDnd.onDragEnd($event)"
+    >
+      <DragHandle
+        :test-id="TestID.dragHandle"
+        :label="dragHandleLabel"
+        :title="dragHandleTitle"
+        :class-name="classNamesVal.dragHandle"
+        :disabled="disabledVal"
+      />
+    </span>
     <ValueSelector
       :value="ruleData?.field"
       :options="fieldsList"
@@ -207,7 +239,7 @@ function onValueSourceChange(v: string | string[]) {
     <template v-if="!showMatchModeEditor">
       <!-- 与 React 版本一致：当 autoSelectField 为 false 且 field 是 placeholder 时，不显示 operator selector -->
       <ValueSelector
-        v-if="schemaVal.value?.autoSelectField || ruleData?.field !== fieldsPlaceholderName"
+        v-if="schemaVal?.autoSelectField || ruleData?.field !== fieldsPlaceholderName"
         :value="ruleData?.operator"
         :options="operatorsVal"
         :test-id="TestID.operators"
