@@ -1,7 +1,9 @@
 export { useQueryBuilderSchema } from './useQueryBuilderSchema';
 export { useRuleGroup } from './useRuleGroup';
+export { useRuleGroupUnwrapped } from './useRuleGroupUnwrapped';
 export { useRule } from './useRule';
 export { usePathsMemo } from './usePathsMemo';
+export { useNativeInlineCombinatorDnD } from './useNativeInlineCombinatorDnD';
 export { useStopEventPropagation } from './useStopEventPropagation';
 export { useDeprecatedProps } from './useDeprecatedProps';
 export { useReactDndWarning } from './useReactDndWarning';
