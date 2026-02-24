@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Component } from 'vue';
 import { computed, inject } from 'vue';
 import { rootPath } from '@react-querybuilder/core';
 import { TestID } from '@react-querybuilder/core';
@@ -8,6 +9,12 @@ import { QUERY_BUILDER_CONTEXT_KEY } from '../context/queryBuilderContext';
 import ValueSelector from './ValueSelector.vue';
 import NotToggle from './NotToggle.vue';
 import ActionElement from './ActionElement.vue';
+
+const defaultControls = {
+  combinatorSelector: ValueSelector,
+  notToggle: NotToggle,
+  actionElement: ActionElement,
+};
 
 const props = withDefaults(
   defineProps<{
@@ -62,11 +69,23 @@ const muteGroupLabel = computed(() => ((translationsVal.value?.muteGroup as { la
 const muteGroupTitle = computed(() => ((translationsVal.value?.muteGroup as { title?: string })?.title ?? ''));
 const notToggleLabel = computed(() => (translationsVal.value?.notToggle as { label?: string })?.label ?? 'Not');
 const notToggleTitle = computed(() => (translationsVal.value?.notToggle as { title?: string })?.title ?? 'Invert this group');
+
+/** 从 schema.controls 取组件，未提供时用默认组件（与 RuleGroupHeaderComponents 一致） */
+const controls = computed(() => {
+  const c = (schemaVal.value as { controls?: Record<string, Component> } | undefined)?.controls;
+  if (!c) return defaultControls;
+  return {
+    combinatorSelector: (c.combinatorSelector as Component) ?? defaultControls.combinatorSelector,
+    notToggle: (c.notToggle as Component) ?? defaultControls.notToggle,
+    actionElement: (c.actionElement as Component) ?? defaultControls.actionElement,
+  };
+});
 </script>
 
 <template>
   <div :class="classNamesVal.header">
-    <ValueSelector
+    <component
+      :is="controls.combinatorSelector"
       v-if="combinatorVal !== undefined"
       :value="combinatorVal"
       :options="combinatorsList"
@@ -76,8 +95,9 @@ const notToggleTitle = computed(() => (translationsVal.value?.notToggle as { tit
       :disabled="disabledVal"
       :handle-on-change="(v: string | string[]) => r.onCombinatorChange(Array.isArray(v) ? v[0] : v)"
     />
-    <NotToggle
+    <component
       v-if="schemaVal?.showNotToggle"
+      :is="controls.notToggle"
       :test-id="TestID.notToggle"
       :checked="!!ruleGroupVal?.not"
       :class-name="classNamesVal.notToggle"
@@ -86,7 +106,8 @@ const notToggleTitle = computed(() => (translationsVal.value?.notToggle as { tit
       :title="notToggleTitle"
       :handle-on-change="r.onNotToggleChange"
     />
-    <ActionElement
+    <component
+      :is="controls.actionElement"
       :test-id="TestID.addRule"
       :label="addRuleLabel"
       :title="addRuleTitle"
@@ -94,7 +115,8 @@ const notToggleTitle = computed(() => (translationsVal.value?.notToggle as { tit
       :class-name="classNamesVal.addRule"
       :handle-on-click="r.addRule"
     />
-    <ActionElement
+    <component
+      :is="controls.actionElement"
       :test-id="TestID.addGroup"
       :label="addGroupLabel"
       :title="addGroupTitle"
@@ -102,8 +124,9 @@ const notToggleTitle = computed(() => (translationsVal.value?.notToggle as { tit
       :class-name="classNamesVal.addGroup"
       :handle-on-click="r.addGroup"
     />
-    <ActionElement
+    <component
       v-if="showCloneButtonsVal"
+      :is="controls.actionElement"
       :test-id="TestID.cloneGroup"
       :label="cloneGroupLabel"
       :title="cloneGroupTitle"
@@ -111,20 +134,24 @@ const notToggleTitle = computed(() => (translationsVal.value?.notToggle as { tit
       :class-name="classNamesVal.cloneGroup"
       :handle-on-click="r.cloneGroup"
     />
-    <ActionElement
+    <component
       v-if="showLockButtonsVal"
+      :is="controls.actionElement"
       :test-id="TestID.lockGroup"
       :label="lockLabel"
       :title="lockTitle"
+      :rule-or-group="ruleGroupVal"
       :disabled="parentDisabledVal"
       :class-name="classNamesVal.lockGroup"
       :handle-on-click="r.toggleLockGroup"
     />
-    <ActionElement
+    <component
       v-if="showMuteButtonsVal"
+      :is="controls.actionElement"
       :test-id="TestID.muteGroup"
       :label="muteGroupLabel"
       :title="muteGroupTitle"
+      :rule-or-group="ruleGroupVal"
       :disabled="disabledVal"
       :class-name="classNamesVal.muteGroup"
       :handle-on-click="r.toggleMuteGroup"
