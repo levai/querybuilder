@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Component } from 'vue';
 import { computed } from 'vue';
 import { TestID } from '@react-querybuilder/core';
 import { useRuleGroupUnwrapped } from '../composables/useRuleGroupUnwrapped';
@@ -7,6 +8,14 @@ import NotToggle from './NotToggle.vue';
 import ActionElement from './ActionElement.vue';
 import ShiftActions from './ShiftActions.vue';
 import DragHandle from './DragHandle.vue';
+
+const defaultControls = {
+  shiftActions: ShiftActions,
+  dragHandle: DragHandle,
+  combinatorSelector: ValueSelector,
+  notToggle: NotToggle,
+  actionElement: ActionElement,
+};
 
 const props = withDefaults(
   defineProps<{
@@ -114,11 +123,25 @@ function onToggleMuteGroup() {
 function onRemoveGroup() {
   rgVal?.removeGroup?.();
 }
+
+/** 从 schema.controls 取组件，未提供时用默认组件（与 React 一致，便于 UI 库覆盖） */
+const controls = computed(() => {
+  const c = (scope.schemaVal.value as { controls?: Record<string, Component> } | undefined)?.controls;
+  if (!c) return defaultControls;
+  return {
+    shiftActions: (c.shiftActions as Component) ?? defaultControls.shiftActions,
+    dragHandle: (c.dragHandle as Component) ?? defaultControls.dragHandle,
+    combinatorSelector: (c.combinatorSelector as Component) ?? defaultControls.combinatorSelector,
+    notToggle: (c.notToggle as Component) ?? defaultControls.notToggle,
+    actionElement: (c.actionElement as Component) ?? defaultControls.actionElement,
+  };
+});
 </script>
 
 <template>
-  <ShiftActions
+  <component
     v-if="showShiftActionsVal && rgVal"
+    :is="controls.shiftActions"
     :test-id="TestID.shiftActions"
     :shift-up="rgVal.shiftGroupUp!"
     :shift-down="rgVal.shiftGroupDown!"
@@ -139,7 +162,8 @@ function onRemoveGroup() {
     @dragstart="onDragStart?.(($event as DragEvent))"
     @dragend="onDragEnd?.(($event as DragEvent))"
   >
-    <DragHandle
+    <component
+      :is="controls.dragHandle"
       :test-id="TestID.dragHandle"
       :label="dragHandleLabel"
       :title="dragHandleTitle"
@@ -147,8 +171,9 @@ function onRemoveGroup() {
       :disabled="disabledVal"
     />
   </span>
-  <ValueSelector
+  <component
     v-if="combinatorVal !== undefined && rgVal"
+    :is="controls.combinatorSelector"
     :value="combinatorVal"
     :options="combinatorsList"
     :test-id="TestID.combinators"
@@ -157,8 +182,9 @@ function onRemoveGroup() {
     :disabled="disabledVal"
     :handle-on-change="onCombinatorChange"
   />
-  <NotToggle
+  <component
     v-if="showNotToggle && rgVal"
+    :is="controls.notToggle"
     :test-id="TestID.notToggle"
     :checked="ruleGroupNot"
     :class-name="cn.notToggle"
@@ -167,8 +193,9 @@ function onRemoveGroup() {
     :title="notToggleTitle"
     :handle-on-change="onNotToggleChange"
   />
-  <ActionElement
+  <component
     v-if="rgVal"
+    :is="controls.actionElement"
     :test-id="TestID.addRule"
     :label="addRuleLabel"
     :title="addRuleTitle"
@@ -176,8 +203,9 @@ function onRemoveGroup() {
     :class-name="cn.addRule"
     :handle-on-click="onAddRule"
   />
-  <ActionElement
+  <component
     v-if="rgVal"
+    :is="controls.actionElement"
     :test-id="TestID.addGroup"
     :label="addGroupLabel"
     :title="addGroupTitle"
@@ -185,8 +213,9 @@ function onRemoveGroup() {
     :class-name="cn.addGroup"
     :handle-on-click="onAddGroup"
   />
-  <ActionElement
+  <component
     v-if="showCloneButtonsVal && rgVal"
+    :is="controls.actionElement"
     :test-id="TestID.cloneGroup"
     :label="cloneGroupLabel"
     :title="cloneGroupTitle"
@@ -194,8 +223,9 @@ function onRemoveGroup() {
     :class-name="cn.cloneGroup"
     :handle-on-click="onCloneGroup"
   />
-  <ActionElement
+  <component
     v-if="showLockButtonsVal && rgVal"
+    :is="controls.actionElement"
     :test-id="TestID.lockGroup"
     :label="lockLabel"
     :title="lockTitle"
@@ -203,8 +233,9 @@ function onRemoveGroup() {
     :class-name="cn.lockGroup"
     :handle-on-click="onToggleLockGroup"
   />
-  <ActionElement
+  <component
     v-if="showMuteButtonsVal && rgVal"
+    :is="controls.actionElement"
     :test-id="TestID.muteGroup"
     :label="muteGroupLabel"
     :title="muteGroupTitle"
@@ -212,8 +243,9 @@ function onRemoveGroup() {
     :class-name="cn.muteGroup"
     :handle-on-click="onToggleMuteGroup"
   />
-  <ActionElement
+  <component
     v-if="pathLength > 0 && rgVal"
+    :is="controls.actionElement"
     :test-id="TestID.removeGroup"
     :label="removeGroupLabel"
     :title="removeGroupTitle"

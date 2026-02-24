@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Component } from 'vue';
 import { computed } from 'vue';
 import { standardClassnames, TestID } from '@react-querybuilder/core';
 import { useRule, type UseRulePathOptions } from '../composables/useRule';
@@ -13,6 +14,17 @@ import MatchModeEditor from './MatchModeEditor.vue';
 import SubQueryWrapper from './SubQueryWrapper.vue';
 import SubQueryHeader from './SubQueryHeader.vue';
 import SubQueryBody from './SubQueryBody.vue';
+
+const defaultControls = {
+  shiftActions: ShiftActions,
+  dragHandle: DragHandle,
+  fieldSelector: ValueSelector,
+  operatorSelector: ValueSelector,
+  valueSourceSelector: ValueSelector,
+  valueEditor: ValueEditor,
+  matchModeEditor: MatchModeEditor,
+  actionElement: ActionElement,
+};
 
 const props = defineProps<UseRulePathOptions>();
 
@@ -128,6 +140,22 @@ function onOperatorChange(v: string | string[]) {
 function onValueSourceChange(v: string | string[]) {
   r.onChangeValueSource(Array.isArray(v) ? v[0] : v);
 }
+
+/** 从 schema.controls 取组件，未提供时用默认组件（与 React 一致，便于 UI 库覆盖） */
+const controls = computed(() => {
+  const c = (schemaVal.value as { controls?: Record<string, Component> } | undefined)?.controls;
+  if (!c) return defaultControls;
+  return {
+    shiftActions: (c.shiftActions as Component) ?? defaultControls.shiftActions,
+    dragHandle: (c.dragHandle as Component) ?? defaultControls.dragHandle,
+    fieldSelector: (c.fieldSelector as Component) ?? defaultControls.fieldSelector,
+    operatorSelector: (c.operatorSelector as Component) ?? defaultControls.operatorSelector,
+    valueSourceSelector: (c.valueSourceSelector as Component) ?? defaultControls.valueSourceSelector,
+    valueEditor: (c.valueEditor as Component) ?? defaultControls.valueEditor,
+    matchModeEditor: (c.matchModeEditor as Component) ?? defaultControls.matchModeEditor,
+    actionElement: (c.actionElement as Component) ?? defaultControls.actionElement,
+  };
+});
 </script>
 
 <template>
@@ -142,8 +170,9 @@ function onValueSourceChange(v: string | string[]) {
     @drop="enableDragAndDrop ? ruleDnd.onDrop($event) : undefined"
     @dragleave="enableDragAndDrop ? ruleDnd.onDragleave($event) : undefined"
   >
-    <ShiftActions
+    <component
       v-if="showShiftActions"
+      :is="controls.shiftActions"
       :test-id="TestID.shiftActions"
       :shift-up="r.shiftRuleUp"
       :shift-down="r.shiftRuleDown"
@@ -164,7 +193,8 @@ function onValueSourceChange(v: string | string[]) {
       @dragstart="ruleDnd.onDragStart($event)"
       @dragend="ruleDnd.onDragEnd($event)"
     >
-      <DragHandle
+      <component
+        :is="controls.dragHandle"
         :test-id="TestID.dragHandle"
         :label="dragHandleLabel"
         :title="dragHandleTitle"
@@ -172,7 +202,8 @@ function onValueSourceChange(v: string | string[]) {
         :disabled="disabledVal"
       />
     </span>
-    <ValueSelector
+    <component
+      :is="controls.fieldSelector"
       :value="ruleData?.field"
       :options="fieldsList"
       :test-id="TestID.fields"
@@ -181,8 +212,9 @@ function onValueSourceChange(v: string | string[]) {
       :class-name="classNamesVal.fields"
       :handle-on-change="onFieldChange"
     />
-    <MatchModeEditor
+    <component
       v-if="showMatchModeEditor"
+      :is="controls.matchModeEditor"
       :value="matchValueForEditor"
       :options="matchModesVal"
       :test-id="TestID.matchModeEditor"
@@ -199,8 +231,9 @@ function onValueSourceChange(v: string | string[]) {
       @update:model-value="(v) => r.onChangeValue(v)"
     >
       <SubQueryHeader :disabled="disabledVal" :parent-disabled="disabledVal" />
-      <ActionElement
+      <component
         v-if="showCloneButtons"
+        :is="controls.actionElement"
         :test-id="TestID.cloneRule"
         :label="cloneRuleLabel"
         :title="cloneRuleTitle"
@@ -208,8 +241,9 @@ function onValueSourceChange(v: string | string[]) {
         :class-name="classNamesVal.cloneRule"
         :handle-on-click="cloneRuleFn"
       />
-      <ActionElement
+      <component
         v-if="showLockButtons"
+        :is="controls.actionElement"
         :test-id="TestID.lockRule"
         :label="lockRuleLabel"
         :title="lockRuleTitle"
@@ -217,8 +251,9 @@ function onValueSourceChange(v: string | string[]) {
         :class-name="classNamesVal.lockRule"
         :handle-on-click="toggleLockRule"
       />
-      <ActionElement
+      <component
         v-if="showMuteButtons"
+        :is="controls.actionElement"
         :test-id="TestID.muteRule"
         :label="muteRuleLabel"
         :title="muteRuleTitle"
@@ -226,7 +261,8 @@ function onValueSourceChange(v: string | string[]) {
         :class-name="classNamesVal.muteRule"
         :handle-on-click="toggleMuteRuleFn"
       />
-      <ActionElement
+      <component
+        :is="controls.actionElement"
         :test-id="TestID.removeRule"
         :label="removeRuleLabel"
         :title="removeRuleTitle"
@@ -238,8 +274,9 @@ function onValueSourceChange(v: string | string[]) {
     </SubQueryWrapper>
     <template v-if="!showMatchModeEditor">
       <!-- 与 React 版本一致：当 autoSelectField 为 false 且 field 是 placeholder 时，不显示 operator selector -->
-      <ValueSelector
+      <component
         v-if="schemaVal?.autoSelectField || ruleData?.field !== fieldsPlaceholderName"
+        :is="controls.operatorSelector"
         :value="ruleData?.operator"
         :options="operatorsVal"
         :test-id="TestID.operators"
@@ -248,8 +285,9 @@ function onValueSourceChange(v: string | string[]) {
         :class-name="classNamesVal.operators"
         :handle-on-change="onOperatorChange"
       />
-      <ValueSelector
+      <component
         v-if="showValueSourceSelector"
+        :is="controls.valueSourceSelector"
         :value="ruleData?.valueSource ?? 'value'"
         :options="valueSourceOptionsVal"
         :test-id="TestID.valueSourceSelector"
@@ -258,8 +296,9 @@ function onValueSourceChange(v: string | string[]) {
         :class-name="classNamesVal.valueSource"
         :handle-on-change="onValueSourceChange"
       />
-      <ValueEditor
+      <component
         v-if="showValueControls"
+        :is="controls.valueEditor"
         :value="ruleData?.value"
         :type="valueEditorTypeVal"
         :input-type="inputTypeVal"
@@ -277,8 +316,9 @@ function onValueSourceChange(v: string | string[]) {
       />
     </template>
     <template v-if="!showMatchModeEditor">
-      <ActionElement
+      <component
         v-if="showCloneButtons"
+        :is="controls.actionElement"
         :test-id="TestID.cloneRule"
         :label="cloneRuleLabel"
         :title="cloneRuleTitle"
@@ -286,8 +326,9 @@ function onValueSourceChange(v: string | string[]) {
         :class-name="classNamesVal.cloneRule"
         :handle-on-click="cloneRuleFn"
       />
-      <ActionElement
+      <component
         v-if="showLockButtons"
+        :is="controls.actionElement"
         :test-id="TestID.lockRule"
         :label="lockRuleLabel"
         :title="lockRuleTitle"
@@ -295,8 +336,9 @@ function onValueSourceChange(v: string | string[]) {
         :class-name="classNamesVal.lockRule"
         :handle-on-click="toggleLockRule"
       />
-      <ActionElement
+      <component
         v-if="showMuteButtons"
+        :is="controls.actionElement"
         :test-id="TestID.muteRule"
         :label="muteRuleLabel"
         :title="muteRuleTitle"
@@ -304,7 +346,8 @@ function onValueSourceChange(v: string | string[]) {
         :class-name="classNamesVal.muteRule"
         :handle-on-click="toggleMuteRuleFn"
       />
-      <ActionElement
+      <component
+        :is="controls.actionElement"
         :test-id="TestID.removeRule"
         :label="removeRuleLabel"
         :title="removeRuleTitle"

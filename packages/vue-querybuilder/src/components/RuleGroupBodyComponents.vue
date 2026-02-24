@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import type { Component } from 'vue';
 import { computed } from 'vue';
 import { isRuleGroup, pathsAreEqual, TestID } from '@react-querybuilder/core';
 import type { RuleGroupTypeAny, RuleType } from '@react-querybuilder/core';
 import { useRuleGroupUnwrapped } from '../composables/useRuleGroupUnwrapped';
 import Rule from './Rule.vue';
 import InlineCombinator from './InlineCombinator.vue';
+
+const defaultControls = {
+  rule: Rule,
+  inlineCombinator: InlineCombinator,
+};
 
 const props = withDefaults(
   defineProps<{
@@ -58,12 +64,23 @@ function onCombinatorChange(v: string) {
 function onIndependentCombinatorChange(v: string, idx: number) {
   rgVal?.onIndependentCombinatorChange?.(v, idx);
 }
+
+/** 从 schema.controls 取组件，未提供时用默认组件（与 React 一致，便于 UI 库覆盖） */
+const controls = computed(() => {
+  const c = (scope.schemaVal.value as { controls?: Record<string, Component> } | undefined)?.controls;
+  if (!c) return defaultControls;
+  return {
+    rule: (c.rule as Component) ?? defaultControls.rule,
+    inlineCombinator: (c.inlineCombinator as Component) ?? defaultControls.inlineCombinator,
+  };
+});
 </script>
 
 <template>
   <template v-for="(child, idx) in rulesArray" :key="childKey(child, idx)">
     <template v-if="!independentCombinatorsVal && showCombinatorsBetweenRulesVal && idx > 0">
-      <InlineCombinator
+      <component
+        :is="controls.inlineCombinator"
         :value="combinatorVal"
         :options="combinatorsList"
         :test-id="TestID.inlineCombinator"
@@ -76,8 +93,9 @@ function onIndependentCombinatorChange(v: string, idx: number) {
         :dnd-rules="enableDropTargetsVal ? rulesArray : undefined"
       />
     </template>
-    <InlineCombinator
+    <component
       v-if="typeof child === 'string'"
+      :is="controls.inlineCombinator"
       :value="child"
       :options="combinatorsList"
       :test-id="TestID.inlineCombinator"
@@ -85,7 +103,7 @@ function onIndependentCombinatorChange(v: string, idx: number) {
       :class-name="cn.combinators"
       :between-rules-class-name="cn.betweenRules"
       :disabled="disabledAt(idx)"
-      :handle-on-change="(v) => onIndependentCombinatorChange(v, idx)"
+      :handle-on-change="(v: string) => onIndependentCombinatorChange(v, idx)"
     />
     <component
       v-else-if="isRuleGroup(child)"
@@ -98,8 +116,9 @@ function onIndependentCombinatorChange(v: string, idx: number) {
       :shift-down-disabled="shiftDownDisabledAt(idx)"
       :context="context"
     />
-    <Rule
+    <component
       v-else-if="typeof child !== 'string'"
+      :is="controls.rule"
       :path="pathAt(idx)"
       :disabled="disabledAt(idx)"
       :parent-disabled="parentDisabledVal || disabledVal"
