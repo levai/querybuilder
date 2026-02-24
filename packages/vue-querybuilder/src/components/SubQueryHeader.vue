@@ -44,6 +44,7 @@ function unwrapRef<T>(v: T | { value?: T } | undefined): T {
 const classNamesVal = computed(() => (unwrapRef(r.classNames) ?? {}) as Record<string, string>);
 const disabledVal = computed(() => !!unwrapRef(r.disabled));
 const parentDisabledVal = computed(() => !!unwrapRef(r.parentDisabled));
+const mutedVal = computed(() => !!unwrapRef(r.muted));
 const combinatorVal = computed(() => (unwrapRef(r.combinator) ?? '') as string);
 const ruleGroupVal = computed(() => unwrapRef(r.ruleGroup) as RuleGroupTypeAny | null);
 const schemaUnwrapped = computed(() => {
@@ -140,7 +141,7 @@ const controls = computed(() => {
       :test-id="TestID.lockGroup"
       :label="lockLabel"
       :title="lockTitle"
-      :rule-or-group="ruleGroupVal"
+      :locked="disabledVal"
       :disabled="parentDisabledVal"
       :class-name="classNamesVal.lockGroup"
       :handle-on-click="r.toggleLockGroup"
@@ -151,7 +152,7 @@ const controls = computed(() => {
       :test-id="TestID.muteGroup"
       :label="muteGroupLabel"
       :title="muteGroupTitle"
-      :rule-or-group="ruleGroupVal"
+      :muted="mutedVal"
       :disabled="disabledVal"
       :class-name="classNamesVal.muteGroup"
       :handle-on-click="r.toggleMuteGroup"
